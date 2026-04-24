@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -205,3 +206,29 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+=======
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Jetson / Model files (용량이 커서 제외)
+models/
+*.engine
+*.onnx
+*.pt
+
+# Installation / Archive files
+archive/
+*.deb
+
+# System files
+.DS_Store
+
+>>>>>>> 6955092 (feat: Jetson Orin Nano 기반 SOC 안전 진단 프로젝트 초기 세팅 완료)
