@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/device.dart';
+import '../services/api_service.dart';
 
 class DeviceViewModel extends ChangeNotifier {
   List<Device> _devices = [];
@@ -11,53 +12,21 @@ class DeviceViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   DeviceViewModel() {
-    // 초기 로딩 시 목데이터 셋업 (내일 실제 통신 전까지 UI 테스트용)
-    _devices = [
-      Device(
-        id: 1, 
-        deviceName: '본관 AI 카메라 01', 
-        location: '본관 1층 로비', 
-        macAddress: 'D2:80:54:74:5B:C7', 
-        isOnline: true, 
-        lastKnownIp: '192.168.1.10', 
-        lastConnectedAt: '2026-03-26 10:15:37', 
-        createdAt: '2026-01-01 10:00:00'
-      ),
-      Device(
-        id: 2, 
-        deviceName: '효민갤러리 AI 단말 02', 
-        location: '효민갤러리 B1', 
-        macAddress: 'A1:23:45:67:89:AB', 
-        isOnline: true, 
-        lastKnownIp: '192.168.1.11', 
-        lastConnectedAt: '2026-03-26 10:18:22', 
-        createdAt: '2026-02-15 11:30:00'
-      ),
-      Device(
-        id: 3, 
-        deviceName: '수덕전 AI 카메라 01', 
-        location: '수덕전 1F', 
-        macAddress: 'B2:34:56:78:9A:BC', 
-        isOnline: false, 
-        lastKnownIp: '192.168.1.12', 
-        lastConnectedAt: '2026-03-25 15:40:11', 
-        createdAt: '2026-01-10 09:20:00'
-      ),
-    ];
+    // 사용자의 요청으로 로컬 목 데이터(더미 데이터)를 모두 지웁니다.
+    _devices = [];
   }
 
-  // 데이터 fetch (내일 실제 API 통신으로 변경될 부분)
+  // 데이터 fetch (실제 API DB 데이터 긁어오기)
   Future<void> fetchDevices() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // API call simulation
-      await Future.delayed(const Duration(seconds: 1));
-      // 실제 API 데이터 파싱 및 갱신 로직 적용 예정
+      // 플러터 앱이 켜질 때 백엔드에 SELECT 요청을 날려서 _devices 배열을 가득 채웁니다!
+      _devices = await ApiService().getJetsonDevices();
     } catch (e) {
-      _errorMessage = '장치 목록을 불러오는 중 오류가 발생했습니다.';
+      _errorMessage = '서버에서 장치 목록을 불러오는 중 오류가 발생했습니다.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -68,6 +37,22 @@ class DeviceViewModel extends ChangeNotifier {
   Future<void> deleteDevice(int id) async {
     _devices.removeWhere((device) => device.id == id);
     notifyListeners();
+  }
+
+  // [추가됨] DB 등록 성공 시, 화면을 즉시 새로고침하기 위해 로컬 배열에 데이터 강제 주입
+  void appendNewDevice(String mac, String name, String location) {
+    final newDevice = Device(
+      id: _devices.isNotEmpty ? _devices.last.id + 1 : 1, // 간단한 더미 ID 부여
+      deviceName: name,
+      location: location,
+      macAddress: mac,
+      isOnline: false, // 새로 설치했으므로 오프라인/대기상태로 판정
+      lastKnownIp: 'IP 무할당',
+      lastConnectedAt: '연결 기록 없음',
+      createdAt: '방금 전 추가됨',
+    );
+    _devices.insert(0, newDevice); // 리스트 맨 위에 노출
+    notifyListeners(); // 이 함수가 호출되어야 화면 뷰가 '아, 목록이 바뀌었구나' 하고 리렌더링 됨!
   }
 
   void mapsToAddDevice(BuildContext context) {

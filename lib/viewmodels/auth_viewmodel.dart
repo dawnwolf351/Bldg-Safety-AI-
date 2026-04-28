@@ -16,11 +16,9 @@ class AuthViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
 
-  // [추가] 세션 관리를 위한 타이머 (영상 촬영 등 시연 시에는 Duration을 1분 등으로 짧게 수정해 보여줄 수 있습니다)
+  // [추가] 세션 관리를 위한 타이머 (서버 토큰 디코딩에 따라 동적 할당됨)
   Timer? _sessionTimer;
   Timer? _popupTimer;
-  // 리얼타임 기준: 액세스5분/리프레쉬30분이므로, 29분 뒤에 경고 팝업을 띄움
-  final int _sessionExpireMinutes = 29; 
 
   // 로그인 시도 (UI에서 선택한 역할 전달)
   Future<String?> login(String email, String password, {String? role}) async {
@@ -32,12 +30,12 @@ class AuthViewModel extends ChangeNotifier {
       _isLoading = false;
 
       if (user != null) {
-        // 권한 교차 검증: UI에서 누른 권한과 실제 DB에 저장된 권한이 다른지 심사
+        // 권한 교차 검증: 사용자가 누른 탭(권한)과 실제 가져온 계정의 권한이 다른지 심사
         if (role != null && user.role != role) {
+          await _apiService.logout(); // 잘못 발급된 토큰 즉시 무효화
           notifyListeners();
-          return role == 'admin'
-              ? '현장 관리자 권한이 없습니다.\n일반 사용자로 로그인해주세요.'
-              : '이 계정은 현장 관리자 전용입니다.\n상단의 현장 관리자 탭을 선택하고 로그인해주세요.';
+          // 서버가 실제로 어떤 값을 뱉었는지 화면에 띄워서 확인합니다.
+          return '권한 불일치로 로그인 할 수 없습니다.\n[선택한 탭: $role, 서버응답 권한: ${user.role}]';
         }
 
         _currentUser = user; // 검증 통과 시 로그인 승인
@@ -157,11 +155,16 @@ class AuthViewModel extends ChangeNotifier {
   // [세션 및 팝업 타이머 로직]
   // ===============================================
 
-  void startSessionTimer() {
+  void startSessionTimer() async {
     cancelTimers();
-    debugPrint('⏳ [세션 타이머] $_sessionExpireMinutes 분 뒤에 팝업 알람이 울리도록 예약되었습니다.');
-    _sessionTimer = Timer(Duration(minutes: _sessionExpireMinutes), () {
-      debugPrint('💥 [세션 타이머] 지정된 시간이 만료되었습니다. 팝업 호출을 시도합니다.');
+
+    // 서버 토큰의 디코딩 여부와 무관하게, 프론트엔드에서 수동으로 기준 시간 강제 할당
+    // Access Token 15분 기준 (900초). 만료 1분 전(14분 = 840초)에 경고 팝업 발생!
+    int showPopupAfterSeconds = 14 * 60;
+
+    debugPrint('⏳ [정적 세션 타이머] 프론트엔드 강제 15분 세션(액세스 토큰) 가동. 14분 뒤 경고 알람 예약.');
+
+    _sessionTimer = Timer(Duration(seconds: showPopupAfterSeconds), () {
       _showSessionWarningPopup();
     });
   }
@@ -176,9 +179,10 @@ class AuthViewModel extends ChangeNotifier {
     // globalNavKey를 통해 현재 화면이 뭔지 몰라도 전역으로 팝업을 강제 오버레이
     final context = globalNavKey.currentContext;
     debugPrint('👉 [세션 타이머] 화면 Context 상태: $context');
-    
+
     if (context == null) {
-      debugPrint('🚨 [세션 타이머 에러] Context가 null입니다. 화면이 그려지기 전이거나 네비게이터 키가 끊겼습니다.');
+      debugPrint(
+          '🚨 [세션 타이머 에러] Context가 null입니다. 화면이 그려지기 전이거나 네비게이터 키가 끊겼습니다.');
       return;
     }
 
@@ -222,19 +226,33 @@ class AuthViewModel extends ChangeNotifier {
               ElevatedButton(
                 onPressed: () async {
                   _popupTimer?.cancel();
+
+                  // 실제 환경: 서버에 Refresh(토큰 연장)를 요청합니다.
+                  final success = await _apiService.refreshToken();
+                  if (!dialogContext.mounted) return; // async gap 방어
                   Navigator.of(dialogContext).pop();
 
-                  // 실제 환경에서는 여기서 await _apiService.refreshAccessToken(); 등의 조용한 연장 통신 실시
-                  startSessionTimer(); // 다시 29분짜리 타이머 리셋
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('세션이 30분 연장되었습니다.',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      backgroundColor: Color(0xFF06B6D4),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  if (success) {
+                    startSessionTimer(); // 전달받은 새 토큰 정보로 타이머 자동 리셋!
+                    if (!context.mounted) return; // async gap 방어
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text('세션이 성공적으로 연장되었습니다.',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        backgroundColor: Color(0xFF06B6D4),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    // 연장 실패 시 자동 로그아웃
+                    _forceLogoutWithMessage('서버 연장 요청에 실패했습니다. 다시 로그인해주세요.');
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF06B6D4),
@@ -255,6 +273,8 @@ class AuthViewModel extends ChangeNotifier {
 
     final context = globalNavKey.currentContext;
     if (context != null) {
+      if (!context.mounted) return; // async gap 방어
+
       // 만약 세부 뷰(사진 상세 등)에 겹겹이 들어와 있더라도 최상위로 싹 다 팝 시켜서 초기화
       Navigator.of(context).popUntil((route) => route.isFirst);
 
