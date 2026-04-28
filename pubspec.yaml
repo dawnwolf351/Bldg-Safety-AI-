@@ -1,0 +1,33 @@
+name: capstone_project_ui
+description: "딥러닝 기반 실시간 건축물 구조 안전 진단 커스텀 Flutter 프로젝트"
+# 버전을 명시하여 추후 배포/관리에 사용합니다.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  # 상태관리를 위한 Provider (MVVM 패턴의 핵심)
+  provider: ^6.1.2
+  
+  # 네트워크 API 통신을 위한 Dio (REST API 호출)
+  dio: ^5.4.3
+  
+  # 안전한 로그인 토큰 저장을 위한 Secure Storage
+  flutter_secure_storage: ^9.0.0
+  
+  # 다른 컴퓨터(Flask 서버)와 통신하기 위한 소켓 라이브러리
+  socket_io_client: ^3.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+# 아이콘 및 폰트 설정을 위해 flutter 섹션을 추가합니다.
+flutter:
+  uses-material-design: true

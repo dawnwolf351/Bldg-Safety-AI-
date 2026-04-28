@@ -1,0 +1,14 @@
+{
+    "java.configuration.updateBuildConfiguration": "disabled",
+    "java.jdt.ls.java.home": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+    "java.import.gradle.java.home": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+    "gradle.javaDebug.cleanOutput": false,
+    "java.autobuild.enabled": false,
+    "java.server.launchMode": "LightWeight",
+    "java.import.exclusions": [
+        "**/android/**",
+        "**/.pub-cache/**",
+        "**/flutter/**",
+        "**/*"
+    ]
+}
