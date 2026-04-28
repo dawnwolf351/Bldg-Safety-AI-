@@ -1,0 +1,24 @@
+[project]
+name = "soc-safety-interface"
+version = "0.1.0"
+description = "Industrial Safety Vision AI Project"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy<2.0",
+    "onnx>=1.19.0",
+    "torch",
+    "torchvision",
+    "ultralytics>=8.4.41",
+    "onnxruntime-gpu",
+]
+
+[[tool.uv.index]]
+name = "jetson"
+url = "https://pypi.jetson-ai-lab.io/jp6/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "jetson" }
+torchvision = { index = "jetson" }
+onnxruntime-gpu = { index = "jetson" }

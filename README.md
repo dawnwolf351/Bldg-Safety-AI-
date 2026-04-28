@@ -15,3 +15,5 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+# Bldg-Safety-AI-
+딥러닝 기반의 실시간 건물 구조 안전 진단 및 결함 탐지 시스템
