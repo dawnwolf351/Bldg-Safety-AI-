@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구조 안전 진단 시스템 - API 테스트</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --bg: #0f111a;
+            --card-bg: rgba(30, 34, 55, 0.6);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', 'Noto Sans KR', sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            overflow-x: hidden; color: var(--text-main);
+        }
+
+        .container { width: 100%; max-width: 480px; padding: 20px; z-index: 10; }
+
+        .glass-card {
+            background: var(--card-bg); backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px;
+            padding: 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .header { text-align: center; margin-bottom: 32px; }
+        .header h1 {
+            font-size: 28px; font-weight: 700;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;
+        }
+        .header p { color: var(--text-dim); font-size: 14px; }
+
+        .tabs { display: flex; background: rgba(0, 0, 0, 0.2); padding: 5px; border-radius: 14px; margin-bottom: 30px; }
+        .tab-btn {
+            flex: 1; padding: 12px; border: none; background: transparent; color: var(--text-dim);
+            font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; transition: all 0.3s ease;
+        }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px var(--primary-glow); }
+
+        .form-content { display: none; }
+        .form-content.active { display: block; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-wrap { margin-bottom: 20px; }
+        .input-wrap label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 8px; margin-left: 4px; }
+        .input-wrap input, .input-wrap select {
+            width: 100%; padding: 14px 20px; background: rgba(15, 17, 26, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            color: white; font-size: 15px; outline: none; transition: all 0.3s ease;
+        }
+        .input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); }
+
+        .btn-main {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; margin-top: 10px;
+        }
+        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px var(--primary-glow); }
+
+        .btn-danger {
+            width: 100%; padding: 14px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: none; border-radius: 14px; color: white; font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; margin-top: 10px;
+        }
+        .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(239,68,68,0.4); }
+
+        .btn-extend {
+            width: 100%; padding: 14px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: none; border-radius: 14px; color: white; font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; margin-top: 10px;
+        }
+        .btn-extend:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -5px rgba(245,158,11,0.4); }
+
+        #result-panel {
+            margin-top: 30px; padding: 20px; border-radius: 16px;
+            background: rgba(0, 0, 0, 0.3); display: none; border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;
+        }
+        .status-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-error { background: rgba(239, 68, 68, 0.1); color: var(--error); }
+
+        .json-viewer {
+            font-family: 'Consolas', monospace; font-size: 12px; color: #cdcdcd;
+            white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto;
+        }
+
+        /* Session Timer */
+        .session-bar {
+            margin-top: 20px; padding: 16px 20px; border-radius: 14px;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.08); display: none;
+        }
+        .session-bar .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .session-bar .timer {
+            font-size: 32px; font-weight: 700; font-family: 'Consolas', monospace;
+            background: linear-gradient(to right, #10b981, #34d399);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .session-bar .timer.warning { background: linear-gradient(to right, #f59e0b, #fbbf24); -webkit-background-clip: text; }
+        .session-bar .timer.danger { background: linear-gradient(to right, #ef4444, #f87171); -webkit-background-clip: text; }
+        .progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(to right, #10b981, #34d399); border-radius: 2px; transition: width 1s linear; }
+        .progress-fill.warning { background: linear-gradient(to right, #f59e0b, #fbbf24); }
+        .progress-fill.danger { background: linear-gradient(to right, #ef4444, #f87171); }
+
+        /* Session Expired Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px; padding: 30px; max-width: 380px; text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .modal-box h2 { font-size: 20px; margin-bottom: 12px; color: var(--warning); }
+        .modal-box p { font-size: 14px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px; }
+        .modal-btn-extend { background: var(--primary); color: white; }
+        .modal-btn-logout { background: rgba(255,255,255,0.1); color: var(--text-dim); }
+
+        .footer { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; opacity: 0.6; }
+        .server-indicator { display: flex; align-items: center; font-size: 11px; color: var(--text-dim); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+        .dot-glow { box-shadow: 0 0 8px currentColor; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+
+        #token-area { margin-top: 15px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; display: none; }
+
+        #logged-in-view { display: none; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <div class="header">
+                <h1>SAFE GUARD AI</h1>
+                <p>구조 안전 진단 시스템 백엔드 테스트</p>
+            </div>
+
+            <!-- Login/Register View -->
+            <div id="auth-view">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('login')">로그인</button>
+                    <button class="tab-btn" onclick="switchTab('register')">회원가입</button>
+                </div>
+
+                <div id="login-form" class="form-content active">
+                    <div class="input-wrap">
+                        <label>EMAIL ADDRESS</label>
+                        <input type="email" id="login-email" placeholder="name@example.com">
+                    </div>
+                    <div class="input-wrap">
+                        <label>PASSWORD</label>
+                        <input type="password" id="login-password" placeholder="••••••••">
+                    </div>
+                    <button class="btn-main" onclick="handleLogin()">ACCESS SYSTEM</button>
+                </div>
+
+                <div id="register-form" class="form-content">
+                    <div class="input-wrap">
+                        <label>EMAIL ADDRESS</label>
+                        <input type="email" id="reg-email" placeholder="name@example.com">
+                    </div>
+                    <div class="input-wrap">
+                        <label>PASSWORD</label>
+                        <input type="password" id="reg-password" placeholder="••••••••">
+                    </div>
+                    <div class="input-wrap">
+                        <label>FULL NAME</label>
+                        <input type="text" id="reg-name" placeholder="홍길동">
+                    </div>
+                    <div class="input-wrap">
+                        <label>SYSTEM ROLE</label>
+                        <select id="reg-role">
+                            <option value="viewer">VIEWER (일반조회)</option>
+                            <option value="inspector">INSPECTOR (현장점검)</option>
+                            <option value="admin">ADMIN (시스템관리)</option>
+                        </select>
+                    </div>
+                    <button class="btn-main" onclick="handleRegister()">CREATE ACCOUNT</button>
+                </div>
+            </div>
+
+            <!-- Logged-In View -->
+            <div id="logged-in-view">
+                <div style="text-align:center; margin-bottom: 20px;">
+                    <div style="font-size:13px; color:var(--text-dim);">로그인 계정</div>
+                    <div id="logged-in-email" style="font-size:18px; font-weight:700; margin-top:4px;"></div>
+                </div>
+
+                <div class="session-bar" id="session-bar">
+                    <div class="label">세션 남은 시간</div>
+                    <div class="timer" id="session-timer">30:00</div>
+                    <div class="progress-track"><div class="progress-fill" id="session-progress" style="width:100%"></div></div>
+                </div>
+
+                <button class="btn-extend" onclick="extendSession()">⏱ 시간 연장 (30분 리셋)</button>
+                <button class="btn-danger" onclick="handleLogout()">로그아웃</button>
+            </div>
+
+            <!-- Result Display -->
+            <div id="result-panel">
+                <div id="status-badge" class="status-badge">READY</div>
+                <div class="json-viewer" id="json-result"></div>
+                <div id="token-area"></div>
+            </div>
+
+            <div class="footer">
+                <div class="server-indicator">
+                    <div id="server-dot" class="dot" style="background: grey;"></div>
+                    <span id="server-status-text">CONNECTING...</span>
+                </div>
+                <div style="font-size: 10px; color: var(--text-dim);">v2.0 | Token Auth</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Warning Modal -->
+    <div class="modal-overlay" id="session-modal">
+        <div class="modal-box">
+            <h2>⚠️ 세션 만료 예정</h2>
+            <p>세션이 곧 만료됩니다.<br>연장하지 않으면 자동으로 로그아웃됩니다.</p>
+            <div class="modal-actions">
+                <button class="modal-btn-extend" onclick="extendSession()">시간 연장</button>
+                <button class="modal-btn-logout" onclick="handleLogout()">로그아웃</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api/auth`;
+
+        // --- Token Storage ---
+        let accessToken = localStorage.getItem('access_token');
+        let refreshToken = localStorage.getItem('refresh_token');
+        let sessionEndTime = parseInt(localStorage.getItem('session_end_time') || '0');
+
+        let autoRefreshTimer = null;   // access token 자동 갱신 (4분마다)
+        let sessionCountdown = null;   // 세션 카운트다운 UI 갱신 (1초마다)
+        let warningShown = false;
+
+        const REFRESH_INTERVAL = 4 * 60 * 1000;  // 4분 (access token 만료 1분 전)
+        const SESSION_DURATION = 30 * 60 * 1000;  // 30분
+        const WARNING_THRESHOLD = 5 * 60;         // 5분 전 경고 (초 단위)
+
+        // --- 초기화 ---
+        window.addEventListener('load', () => {
+            checkServer();
+            setInterval(checkServer, 10000);
+
+            if (refreshToken && sessionEndTime > Date.now()) {
+                // 새로고침 시 세션 연장 (extend=true)
+                refreshTokenRequest(true);
+            } else if (refreshToken) {
+                // 세션 만료됨
+                performLogout();
+            }
+        });
+
+        // --- Tab 전환 ---
+        function switchTab(type) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-content').forEach(f => f.classList.remove('active'));
+            if (type === 'login') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('register-form').classList.add('active');
+            }
+            document.getElementById('result-panel').style.display = 'none';
+        }
+
+        // --- 회원가입 ---
+        async function handleRegister() {
+            const payload = {
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-password').value,
+                name: document.getElementById('reg-name').value,
+                role: document.getElementById('reg-role').value
+            };
+            updateStatus('SENDING...', 'neutral');
+            try {
+                const res = await fetch(`${API_BASE}/register`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                showFinalResult(res.ok, data);
+            } catch (e) {
+                showFinalResult(false, { error: '서버 연결 실패.' });
+            }
+        }
+
+        // --- 로그인 ---
+        async function handleLogin() {
+            const payload = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+            updateStatus('AUTHENTICATING...', 'neutral');
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (res.ok && data.access_token && data.refresh_token) {
+                    saveTokens(data.access_token, data.refresh_token);
+                    showLoggedInView(payload.email);
+                    startSessionTimer();
+                    startAutoRefresh();
+                }
+                showFinalResult(res.ok, data);
+            } catch (e) {
+                showFinalResult(false, { error: '로그인 서버 연결 실패' });
+            }
+        }
+
+        // --- Token 갱신 ---
+        async function refreshTokenRequest(extend = false) {
+            if (!refreshToken) return;
+            try {
+                const res = await fetch(`${API_BASE}/refresh`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken, extend: extend })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    accessToken = data.access_token;
+                    localStorage.setItem('access_token', accessToken);
+
+                    if (extend && data.refresh_token) {
+                        refreshToken = data.refresh_token;
+                        localStorage.setItem('refresh_token', refreshToken);
+                        resetSessionEndTime();
+                        warningShown = false;
+                        document.getElementById('session-modal').classList.remove('show');
+                    }
+
+                    // UI 복원 (새로고침 후)
+                    if (!document.getElementById('logged-in-view').style.display ||
+                        document.getElementById('logged-in-view').style.display === 'none') {
+                        try {
+                            const decoded = JSON.parse(atob(accessToken.split('.')[1]));
+                            showLoggedInView(decoded.email);
+                        } catch(e) { showLoggedInView('사용자'); }
+                        startSessionTimer();
+                        startAutoRefresh();
+                    }
+
+                    console.log(`[Token] ${extend ? '세션 연장됨 (30분 리셋)' : 'Access Token 자동 갱신'}`);
+                } else {
+                    console.error('[Token] 갱신 실패:', data.error);
+                    performLogout();
+                }
+            } catch (e) {
+                console.error('[Token] 갱신 요청 실패:', e);
+            }
+        }
+
+        // --- 시간 연장 ---
+        function extendSession() {
+            refreshTokenRequest(true);
+        }
+
+        // --- 로그아웃 ---
+        async function handleLogout() {
+            try {
+                await fetch(`${API_BASE}/logout`, { method: 'POST' });
+            } catch (e) { /* ignore */ }
+            performLogout();
+        }
+
+        function performLogout() {
+            accessToken = null;
+            refreshToken = null;
+            sessionEndTime = 0;
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('session_end_time');
+            clearInterval(autoRefreshTimer);
+            clearInterval(sessionCountdown);
+            warningShown = false;
+            document.getElementById('session-modal').classList.remove('show');
+            document.getElementById('auth-view').style.display = 'block';
+            document.getElementById('logged-in-view').style.display = 'none';
+            document.getElementById('session-bar').style.display = 'none';
+            document.getElementById('result-panel').style.display = 'none';
+            document.getElementById('token-area').style.display = 'none';
+        }
+
+        // --- Token 저장 ---
+        function saveTokens(access, refresh) {
+            accessToken = access;
+            refreshToken = refresh;
+            localStorage.setItem('access_token', access);
+            localStorage.setItem('refresh_token', refresh);
+            resetSessionEndTime();
+        }
+
+        function resetSessionEndTime() {
+            sessionEndTime = Date.now() + SESSION_DURATION;
+            localStorage.setItem('session_end_time', sessionEndTime.toString());
+        }
+
+        // --- UI 전환 ---
+        function showLoggedInView(email) {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('logged-in-view').style.display = 'block';
+            document.getElementById('logged-in-email').textContent = email;
+            document.getElementById('session-bar').style.display = 'block';
+        }
+
+        // --- 세션 타이머 ---
+        function startSessionTimer() {
+            clearInterval(sessionCountdown);
+            sessionCountdown = setInterval(() => {
+                const remaining = Math.max(0, Math.floor((sessionEndTime - Date.now()) / 1000));
+                const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+                const seconds = (remaining % 60).toString().padStart(2, '0');
+
+                const timerEl = document.getElementById('session-timer');
+                const progressEl = document.getElementById('session-progress');
+                const percent = (remaining / (SESSION_DURATION / 1000)) * 100;
+
+                timerEl.textContent = `${minutes}:${seconds}`;
+                progressEl.style.width = `${percent}%`;
+
+                // 스타일 변경
+                timerEl.className = 'timer';
+                progressEl.className = 'progress-fill';
+                if (remaining <= WARNING_THRESHOLD) {
+                    timerEl.classList.add('danger');
+                    progressEl.classList.add('danger');
+                    if (!warningShown) {
+                        warningShown = true;
+                        document.getElementById('session-modal').classList.add('show');
+                    }
+                } else if (remaining <= 10 * 60) {
+                    timerEl.classList.add('warning');
+                    progressEl.classList.add('warning');
+                }
+
+                if (remaining <= 0) {
+                    clearInterval(sessionCountdown);
+                    performLogout();
+                    alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+                }
+            }, 1000);
+        }
+
+        // --- Access Token 자동 갱신 (4분마다) ---
+        function startAutoRefresh() {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = setInterval(() => {
+                if (refreshToken && sessionEndTime > Date.now()) {
+                    refreshTokenRequest(false);  // extend=false: access만 갱신
+                }
+            }, REFRESH_INTERVAL);
+        }
+
+        // --- 상태 표시 ---
+        function updateStatus(text, type) {
+            const panel = document.getElementById('result-panel');
+            const badge = document.getElementById('status-badge');
+            panel.style.display = 'block';
+            badge.textContent = text;
+            badge.className = 'status-badge ' + (type === 'success' ? 'status-success' : type === 'error' ? 'status-error' : '');
+        }
+
+        function showFinalResult(isSuccess, data) {
+            updateStatus(isSuccess ? 'SUCCESS' : 'FAILED', isSuccess ? 'success' : 'error');
+            document.getElementById('json-result').textContent = JSON.stringify(data, null, 2);
+            if (isSuccess && (data.access_token || data.refresh_token)) {
+                const ta = document.getElementById('token-area');
+                ta.style.display = 'block';
+                ta.innerHTML = `<strong>ACCESS TOKEN:</strong><br>${(data.access_token || '').substring(0, 40)}...<br><br><strong>REFRESH TOKEN:</strong><br>${(data.refresh_token || '').substring(0, 40)}...`;
+            }
+        }
+
+        // --- 서버 상태 체크 ---
+        async function checkServer() {
+            const dot = document.getElementById('server-dot');
+            const text = document.getElementById('server-status-text');
+            try {
+                const url = `${window.location.protocol}//${window.location.hostname}:5000/`;
+                const res = await fetch(url, { method: 'GET' });
+                if (res.ok) {
+                    dot.style.background = '#10b981'; dot.classList.add('dot-glow');
+                    text.textContent = 'ONLINE'; text.style.color = '#10b981';
+                }
+            } catch (e) {
+                dot.style.background = '#ef4444'; dot.classList.remove('dot-glow');
+                text.textContent = 'SERVER OFFLINE'; text.style.color = '#ef4444';
+            }
+        }
+    </script>
+</body>
+
+</html>
