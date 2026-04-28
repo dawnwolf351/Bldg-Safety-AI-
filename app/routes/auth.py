@@ -17,15 +17,18 @@ user_model = auth_ns.model('UserResponse', {
     'id': fields.Integer(description='사용자 고유 ID', example=1),
     'email': fields.String(description='이메일 주소', example='test@naver.com'),
     'name': fields.String(description='사용자 이름', example='홍길동'),
-    'role': fields.String(description='사용자 역할', example='viewer'),
+    'role_name': fields.String(description='직급명', example='ROLE_USER'),
+    'level': fields.Integer(description='권한 레벨 (1=일반, 2=관리자, 3=최고관리자)', example=1),
     'created_at': fields.String(description='가입 일시', example='2024-03-26T12:00:00')
 })
 
 # 2. 토큰 및 사용자 정보 포함 모델 (로그인 성공 시)
 login_success_model = auth_ns.model('LoginResponse', {
-    'message': fields.String(description='성공 메시지', example='Login successful'),
+    'message': fields.String(description='성공 메시지', example='홍길동님 환영합니다!'),
     'access_token': fields.String(description='JWT 액세스 토큰 (5분 만료)'),
     'refresh_token': fields.String(description='JWT 리프레시 토큰 (30분 만료)'),
+    'role': fields.String(description='직급명', example='ROLE_USER'),
+    'level': fields.Integer(description='권한 레벨', example=1),
     'user': fields.Nested(user_model, description='사용자 상세 정보')
 })
 
@@ -41,10 +44,15 @@ login_request = auth_ns.model('LoginRequest', {
 })
 
 signup_request = auth_ns.model('RegisterRequest', {
-    'email': fields.String(required=True, description='이메일 주소', example='test@naver.com'),
-    'password': fields.String(required=True, description='비밀번호', example='1234'),
+    'email': fields.String(required=True, description='이메일 주소', example='newuser@test.com'),
+    'password': fields.String(required=True, description='비밀번호', example='password123'),
     'name': fields.String(required=True, description='이름', example='홍길동'),
-    'role': fields.String(description='역할 (viewer/admin)', default='viewer', example='viewer')
+    'role': fields.String(
+        description='직급 (ROLE_USER: 일반사용자 / ROLE_ADMIN: 현장관리자 / ROLE_SUPER_ADMIN: 최고관리자)',
+        default='ROLE_USER',
+        example='ROLE_USER',
+        enum=['ROLE_USER', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN']
+    )
 })
 
 # 5. 리프레시 토큰 요청/응답 모델
@@ -75,22 +83,28 @@ class RegisterResource(Resource):
     }))
     @apply_error_responses(auth_ns, AUTH_ERRORS, error_model)
     def post(self):
-        """사용자 회원가입"""
+        """사용자 회원가입 (3단계 권한 시스템)"""
         try:
             data = request.get_json(silent=True)
             email = data.get('email')
             password = data.get('password')
             name = data.get('name')
-            role = data.get('role', 'viewer')
+            role_name = data.get('role', 'ROLE_USER')
 
             if not email or not password or not name:
                 return {"error": "Missing fields"}, HTTPStatus.BAD_REQUEST
 
-            success, message = AuthService.register(email, password, name, role)
+            # ROLE_SUPER_ADMIN은 API를 통해 생성 불가 (보안)
+            if role_name == 'ROLE_SUPER_ADMIN':
+                return {"error": "보안 위반: 최고관리자 계정은 API를 통해 생성할 수 없습니다. create_admin.py를 사용하세요."}, HTTPStatus.FORBIDDEN
+
+            success, message = AuthService.register(email, password, name, role_name)
             if not success:
                 return {"error": message}, HTTPStatus.CONFLICT
 
-            return {"message": "User registered successfully"}, HTTPStatus.CREATED
+            return {
+                "message": f"{name}님 회원가입 성공! ({role_name} 권한)"
+            }, HTTPStatus.CREATED
 
         except Exception as e:
             db.session.rollback()
@@ -102,10 +116,10 @@ class RegisterResource(Resource):
 class LoginResource(Resource):
     @auth_ns.doc(id='login_user', description='이메일과 비밀번호로 로그인하여 Access Token과 Refresh Token을 발급받습니다.')
     @auth_ns.expect(login_request)
-    @auth_ns.marshal_with(login_success_model, code=200)
+    @auth_ns.response(code=200, description='로그인 성공', model=login_success_model)
     @apply_error_responses(auth_ns, AUTH_ERRORS, error_model)
     def post(self):
-        """사용자 로그인"""
+        """사용자 로그인 (레벨 정보 포함)"""
         try:
             data = request.get_json(silent=True)
             email = data.get('email')
@@ -116,9 +130,15 @@ class LoginResource(Resource):
             if error:
                 return {"error": error}, HTTPStatus.UNAUTHORIZED
 
+            user_info = result['user']
+
             return {
-                "message": "Login successful",
-                **result
+                "message": f"{user_info['name']}님 환영합니다!",
+                "access_token": result['access_token'],
+                "refresh_token": result['refresh_token'],
+                "role": user_info.get('role_name', 'ROLE_USER'),
+                "level": user_info.get('level', 1),
+                "user": user_info
             }, HTTPStatus.OK
 
         except Exception as e:
