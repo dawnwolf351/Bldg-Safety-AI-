@@ -14,9 +14,9 @@ def setup_initial_data():
 
         # 2. 3가지 기본 직급(Role) 세팅
         roles_data = [
-            {"name": "ROLE_SUPER_ADMIN", "desc": "시스템 최고 관리자 (모든 권한)", "level": 3},
+            {"name": "ROLE_SUPER_ADMIN", "desc": "시스템 최고 관리자 (모든 권한)", "level": 1},
             {"name": "ROLE_ADMIN", "desc": "현장 관리자 (기기 등록/수정)", "level": 2},
-            {"name": "ROLE_USER", "desc": "일반 모니터링 요원 (조회 전용)", "level": 1}
+            {"name": "ROLE_USER", "desc": "일반 모니터링 요원 (조회 전용)", "level": 3}
         ]
 
         for r_data in roles_data:

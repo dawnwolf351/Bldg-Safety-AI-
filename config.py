@@ -9,8 +9,8 @@ class Config:
     JWT_REFRESH_SECRET_KEY = os.getenv('JWT_REFRESH_SECRET_KEY', 'dev-refresh-secret-key')
 
     # JWT 토큰 만료 시간 (초 단위)
-    JWT_ACCESS_TOKEN_EXPIRES = 300       # Access Token: 5분
-    JWT_REFRESH_TOKEN_EXPIRES = 1800     # Refresh Token: 30분
+    JWT_ACCESS_TOKEN_EXPIRES = 60        # Access Token: 1분 (테스트용)
+    JWT_REFRESH_TOKEN_EXPIRES = 60       # Refresh Token: 1분 (테스트용)
     
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = os.getenv('DB_PORT', '3306')

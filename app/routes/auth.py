@@ -47,11 +47,10 @@ signup_request = auth_ns.model('RegisterRequest', {
     'email': fields.String(required=True, description='이메일 주소', example='newuser@test.com'),
     'password': fields.String(required=True, description='비밀번호', example='password123'),
     'name': fields.String(required=True, description='이름', example='홍길동'),
-    'role': fields.String(
-        description='직급 (ROLE_USER: 일반사용자 / ROLE_ADMIN: 현장관리자 / ROLE_SUPER_ADMIN: 최고관리자)',
-        default='ROLE_USER',
-        example='ROLE_USER',
-        enum=['ROLE_USER', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN']
+    'role_id': fields.Integer(
+        description='직급 ID (1=최고관리자, 2=현장관리자, 3=일반사용자)',
+        default=3,
+        example=3
     )
 })
 
@@ -83,27 +82,27 @@ class RegisterResource(Resource):
     }))
     @apply_error_responses(auth_ns, AUTH_ERRORS, error_model)
     def post(self):
-        """사용자 회원가입 (3단계 권한 시스템)"""
+        """사용자 회원가입 (role_id 기반 3단계 권한)"""
         try:
             data = request.get_json(silent=True)
             email = data.get('email')
             password = data.get('password')
             name = data.get('name')
-            role_name = data.get('role', 'ROLE_USER')
+            role_id = data.get('role_id', 3)  # 기본값: 3 (ROLE_USER)
 
             if not email or not password or not name:
                 return {"error": "Missing fields"}, HTTPStatus.BAD_REQUEST
 
-            # ROLE_SUPER_ADMIN은 API를 통해 생성 불가 (보안)
-            if role_name == 'ROLE_SUPER_ADMIN':
+            # role_id=1 (최고관리자)은 API를 통해 생성 불가 (보안)
+            if role_id == 1:
                 return {"error": "보안 위반: 최고관리자 계정은 API를 통해 생성할 수 없습니다. create_admin.py를 사용하세요."}, HTTPStatus.FORBIDDEN
 
-            success, message = AuthService.register(email, password, name, role_name)
+            success, message = AuthService.register(email, password, name, role_id)
             if not success:
                 return {"error": message}, HTTPStatus.CONFLICT
 
             return {
-                "message": f"{name}님 회원가입 성공! ({role_name} 권한)"
+                "message": f"{name}님 회원가입 성공! (role_id={role_id})"
             }, HTTPStatus.CREATED
 
         except Exception as e:

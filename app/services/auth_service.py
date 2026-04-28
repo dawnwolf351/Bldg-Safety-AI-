@@ -37,25 +37,22 @@ def token_required(f):
 
 class AuthService:
     @staticmethod
-    def register(email, password, name, role_name='ROLE_USER'):
+    def register(email, password, name, role_id=3):
         # 이미 존재하는 이메일인지 확인
         if User.query.filter_by(email=email).first():
             return False, "이미 존재하는 이메일입니다."
 
-        # 직급 조회
-        role = Role.query.filter_by(role_name=role_name).first()
+        # role_id 유효성 확인
+        role = Role.query.get(role_id)
         if not role:
-            # 기본값으로 ROLE_USER 사용
-            role = Role.query.filter_by(role_name='ROLE_USER').first()
-            if not role:
-                return False, "기본 직급(ROLE_USER)이 아직 생성되지 않았습니다. create_admin.py를 먼저 실행하세요."
+            return False, f"role_id={role_id}에 해당하는 직급이 존재하지 않습니다."
 
         # 새 유저 생성 및 DB에 저장
         new_user = User(
             email=email,
             password_hash=bcrypt.generate_password_hash(password).decode('utf-8'),
             name=name,
-            role_id=role.id
+            role_id=role_id
         )
         db.session.add(new_user)
         db.session.commit()

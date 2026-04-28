@@ -33,18 +33,18 @@ class UserRegister(Resource):
     @users_ns.expect(register_model)
     @users_ns.doc(
         description='새로운 사용자를 등록합니다.\n\n'
-                    '- 레벨 2(관리자): 레벨 1(일반유저)만 생성 가능\n'
-                    '- 레벨 3(최고관리자): 레벨 1~2 생성 가능\n'
-                    '- API로 최고관리자(레벨 3)는 생성 불가',
+                    '- 레벨 2(관리자): 레벨 3(일반유저)만 생성 가능\n'
+                    '- 레벨 1(최고관리자): 레벨 2~3 생성 가능\n'
+                    '- API로 최고관리자(레벨 1)는 생성 불가',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def post(self, current_user):
         """새로운 사용자 등록 (권한 레벨 기반 차등 생성)"""
-        current_level = current_user.role_info.level if current_user.role_info else 1
+        current_level = current_user.role_info.level if current_user.role_info else 3
 
-        # 일반 유저(레벨 1)는 계정 생성 불가
-        if current_level < 2:
+        # 일반 유저(레벨 3)는 계정 생성 불가
+        if current_level > 2:
             return {"error": "접근 거부: 일반 유저는 계정을 생성할 수 없습니다."}, HTTPStatus.FORBIDDEN
 
         data = request.get_json()
@@ -64,12 +64,12 @@ class UserRegister(Resource):
         if not target_role:
             return {"error": f"'{role_name}'(은)는 존재하지 않는 직급입니다."}, HTTPStatus.BAD_REQUEST
 
-        # API로 최고관리자(레벨 3)는 생성 불가
-        if target_role.level == 3:
+        # API로 최고관리자(레벨 1)는 생성 불가
+        if target_role.level == 1:
             return {"error": "보안 위반: 최고관리자 계정은 API를 통해 생성할 수 없습니다."}, HTTPStatus.FORBIDDEN
 
-        # 나보다 높거나 같은 등급은 생성 불가
-        if current_level <= target_role.level:
+        # 나보다 높거나 같은 등급은 생성 불가 (낮은 숫자 = 높은 권한)
+        if current_level >= target_role.level:
             return {"error": f"접근 거부: 본인(레벨 {current_level})보다 높거나 같은 등급(레벨 {target_role.level})은 생성할 수 없습니다."}, HTTPStatus.FORBIDDEN
 
         # 새 유저 생성 (loginServer의 Bcrypt 암호화 사용)
@@ -92,16 +92,16 @@ class UserDetail(Resource):
 
     @users_ns.expect(user_update_model)
     @users_ns.doc(
-        description='특정 유저의 정보를 수정합니다. (최고관리자 레벨 3 전용)',
+        description='특정 유저의 정보를 수정합니다. (최고관리자 레벨 1 전용)',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def put(self, current_user, user_id):
-        """특정 유저 정보 수정 (최고관리자 레벨 3 전용)"""
-        current_level = current_user.role_info.level if current_user.role_info else 1
+        """특정 유저 정보 수정 (최고관리자 레벨 1 전용)"""
+        current_level = current_user.role_info.level if current_user.role_info else 3
 
-        if current_level < 3:
-            return {"error": "접근 거부: 유저 정보 수정은 최고관리자(레벨 3)만 가능합니다."}, HTTPStatus.FORBIDDEN
+        if current_level > 1:
+            return {"error": "접근 거부: 유저 정보 수정은 최고관리자(레벨 1)만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         target_user = User.query.get_or_404(user_id)
         data = request.get_json()
@@ -114,7 +114,7 @@ class UserDetail(Resource):
             new_role = Role.query.filter_by(role_name=data['role_name']).first()
             if not new_role:
                 return {"error": f"'{data['role_name']}'(은)는 존재하지 않는 직급입니다."}, HTTPStatus.BAD_REQUEST
-            if new_role.level == 3:
+            if new_role.level == 1:
                 return {"error": "보안 위반: 일반 계정을 최고관리자로 승급시킬 수 없습니다."}, HTTPStatus.FORBIDDEN
             target_user.role_id = new_role.id
 
@@ -122,16 +122,16 @@ class UserDetail(Resource):
         return {"message": f"[{target_user.email}] 계정의 정보가 성공적으로 수정되었습니다."}, HTTPStatus.OK
 
     @users_ns.doc(
-        description='특정 유저를 시스템에서 삭제합니다. (최고관리자 레벨 3 전용)',
+        description='특정 유저를 시스템에서 삭제합니다. (최고관리자 레벨 1 전용)',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def delete(self, current_user, user_id):
-        """특정 유저 삭제 (최고관리자 레벨 3 전용)"""
-        current_level = current_user.role_info.level if current_user.role_info else 1
+        """특정 유저 삭제 (최고관리자 레벨 1 전용)"""
+        current_level = current_user.role_info.level if current_user.role_info else 3
 
-        if current_level < 3:
-            return {"error": "접근 거부: 유저 삭제는 최고관리자(레벨 3)만 가능합니다."}, HTTPStatus.FORBIDDEN
+        if current_level > 1:
+            return {"error": "접근 거부: 유저 삭제는 최고관리자(레벨 1)만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         target_user = User.query.get_or_404(user_id)
 

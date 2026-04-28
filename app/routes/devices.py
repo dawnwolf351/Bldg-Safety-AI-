@@ -44,22 +44,22 @@ class DeviceList(Resource):
 
     @devices_ns.doc(
         description='등록된 모든 Jetson 기기 목록을 조회합니다.\n\n'
-                    '- 레벨 1(일반 유저): MAC 주소 숨김\n'
-                    '- 레벨 2 이상(관리자): 모든 정보 노출',
+                    '- 레벨 3(일반 유저): MAC 주소 숨김\n'
+                    '- 레벨 2 이하(관리자): 모든 정보 노출',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def get(self, current_user):
         """모든 Jetson 기기 목록 조회 (일반 유저는 MAC 주소 숨김)"""
-        user_level = current_user.role_info.level if current_user.role_info else 1
+        user_level = current_user.role_info.level if current_user.role_info else 3
 
         devices = JetsonDevice.query.all()
         result = []
 
         for device in devices:
             device_data = device.to_dict()
-            # 레벨 1(일반 유저)이면 MAC 주소를 숨김
-            if user_level < 2:
+            # 레벨 3(일반 유저)이면 MAC 주소를 숨김
+            if user_level > 2:
                 device_data.pop("mac_address", None)
             result.append(device_data)
 
@@ -73,10 +73,10 @@ class DeviceList(Resource):
     @token_required
     def post(self, current_user):
         """새로운 Jetson 기기 등록 (관리자 레벨 2 이상)"""
-        user_level = current_user.role_info.level if current_user.role_info else 1
+        user_level = current_user.role_info.level if current_user.role_info else 3
 
-        # 레벨 2(관리자) 미만이면 거부
-        if user_level < 2:
+        # 레벨 2(관리자) 초과이면 거부 (레벨 3=일반유저)
+        if user_level > 2:
             return {"error": "접근 거부: 기기 등록은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         data = request.get_json()
@@ -113,11 +113,11 @@ class DeviceDetail(Resource):
     @token_required
     def get(self, current_user, device_id):
         """특정 Jetson 기기 상세 조회"""
-        user_level = current_user.role_info.level if current_user.role_info else 1
+        user_level = current_user.role_info.level if current_user.role_info else 3
         device = JetsonDevice.query.get_or_404(device_id)
 
         device_data = device.to_dict()
-        if user_level < 2:
+        if user_level > 2:
             device_data.pop("mac_address", None)
 
         return device_data, HTTPStatus.OK
@@ -130,9 +130,9 @@ class DeviceDetail(Resource):
     @token_required
     def put(self, current_user, device_id):
         """Jetson 기기 정보 수정 (관리자 레벨 2 이상)"""
-        user_level = current_user.role_info.level if current_user.role_info else 1
+        user_level = current_user.role_info.level if current_user.role_info else 3
 
-        if user_level < 2:
+        if user_level > 2:
             return {"error": "접근 거부: 기기 수정은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         device = JetsonDevice.query.get_or_404(device_id)
@@ -147,16 +147,16 @@ class DeviceDetail(Resource):
         return {"message": "기기 정보가 수정되었습니다.", "device": device.to_dict()}, HTTPStatus.OK
 
     @devices_ns.doc(
-        description='Jetson 기기를 시스템에서 삭제합니다. (최고관리자 레벨 3 전용)',
+        description='Jetson 기기를 시스템에서 삭제합니다. (최고관리자 레벨 1 전용)',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def delete(self, current_user, device_id):
-        """Jetson 기기 삭제 (최고관리자 레벨 3 전용)"""
-        user_level = current_user.role_info.level if current_user.role_info else 1
+        """Jetson 기기 삭제 (최고관리자 레벨 1 전용)"""
+        user_level = current_user.role_info.level if current_user.role_info else 3
 
-        if user_level < 3:
-            return {"error": "접근 거부: 기기 삭제는 최고관리자(레벨 3)만 가능합니다."}, HTTPStatus.FORBIDDEN
+        if user_level > 1:
+            return {"error": "접근 거부: 기기 삭제는 최고관리자(레벨 1)만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         device = JetsonDevice.query.get_or_404(device_id)
         db.session.delete(device)
