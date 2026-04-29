@@ -802,6 +802,25 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
+                      // [추가] 중복 검사 (현재 로컬 리스트 기준)
+                      final deviceViewModel = Provider.of<DeviceViewModel>(context, listen: false);
+                      final isDuplicateMac = deviceViewModel.devices.any((d) => d.macAddress.toUpperCase() == mac.toUpperCase());
+                      final isDuplicateName = deviceViewModel.devices.any((d) => d.deviceName == name);
+                      final isDuplicateLocation = deviceViewModel.devices.any((d) => d.location == section);
+
+                      if (isDuplicateMac) {
+                        showError('이미 등록된 MAC 주소입니다.');
+                        return;
+                      }
+                      if (isDuplicateName) {
+                        showError('이미 사용 중인 기기 이름입니다.');
+                        return;
+                      }
+                      if (isDuplicateLocation) {
+                        showError('해당 위치에는 이미 기기가 등록되어 있습니다.');
+                        return;
+                      }
+
                       // 입력값 검증을 넘어갔다면 백엔드로 API 전송 시작!
                       final success = await ApiService()
                           .addJetsonDevice(mac, name, section);
@@ -817,18 +836,23 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       // 모두 통과했을 경우 성공 처리
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Row(
+                        SnackBar(
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          content: const Row(
                             children: [
-                              Icon(Icons.check_circle, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text('새로운 AI 단말이 jetson_devices DB에 등록되었습니다!',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                              Icon(Icons.check_circle_rounded, color: Colors.white),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  '새로운 AI 단말이 DB에 성공적으로 등록되었습니다!',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
                             ],
                           ),
                           backgroundColor: cyanAccent,
-                          duration: Duration(seconds: 2),
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     },
@@ -943,25 +967,21 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         );
                       }
 
-                      // 1. MAC 주소 유효성 검사 (기존 로직 동일)
-                      final macRegex =
-                          RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$');
-                      if (!macRegex.hasMatch(mac)) {
+                      // 1. MAC 주소 유효성 검사
+                      if (!RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$').hasMatch(mac)) {
                         showError('MAC 주소 형식이 올바르지 않습니다.');
                         return;
                       }
 
-                      // 2. 디바이스 이름 특수기호 제한 (기존 로직 동일)
-                      final specialCharRegex = RegExp(r'[!@#<>?":_`~;[\]\\|=+)(*&^%$\s-]');
-                      if (specialCharRegex.hasMatch(name)) {
-                        showError('디바이스 이름에는 특수기호를 사용할 수 없습니다.');
+                      // 2. 디바이스 이름 검사 (한글, 영문, 숫자, 공백 허용)
+                      if (!RegExp(r'^[a-zA-Z0-9가-힣\s]+$').hasMatch(name)) {
+                        showError('디바이스 이름에 특수기호를 사용할 수 없습니다.');
                         return;
                       }
 
-                      // 3. 섹션(위치) 한글/영문만 허용 (기존 로직 동일)
-                      final textOnlyRegex = RegExp(r'^[가-힣a-zA-Z\s]+$');
-                      if (!textOnlyRegex.hasMatch(section)) {
-                        showError('위치(섹션)는 글자(한글/영문)만 입력 가능합니다.');
+                      // 3. 섹션(위치) 검사 (한글, 영문, 공백 허용)
+                      if (!RegExp(r'^[a-zA-Z가-힣\s]+$').hasMatch(section)) {
+                        showError('위치는 글자(한/영)만 입력 가능합니다.');
                         return;
                       }
 

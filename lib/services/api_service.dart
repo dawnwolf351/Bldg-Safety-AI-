@@ -246,10 +246,13 @@ class ApiService {
 
   // DB(jetson_devices)에 기존 장치 수정 프론트엔드 통신 로직 (PUT)
   Future<bool> updateJetsonDevice(int id, String macAddress, String deviceName, String location) async {
+    debugPrint('📝 [수정 시작] 대상 ID: $id, 이름: $deviceName');
     try {
-      final token = await _storage.read(key: 'jwt_token');
+      String? token = await _storage.read(key: 'jwt_token').catchError((e) => null);
+      token ??= _tokenCache; // 저장소 실패 시 메모리 캐시 사용
 
-      // REST API 원칙에 따라 ID를 경로에 포함시킴 (친구분 백엔드 API 설계에 따라 변경될 수 있음)
+      debugPrint('🔑 [수정 인증] Authorization: Bearer ${token != null ? "TOKEN_EXISTS" : "EMPTY"}');
+
       final response = await _dio.put(
         '/api/devices/$id',
         data: {
@@ -265,9 +268,10 @@ class ApiService {
         ),
       );
 
+      debugPrint('✅ [수정 결과] 상태코드: ${response.statusCode}');
       return response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 308;
     } catch (e) {
-      debugPrint('🚨 HTTP updateJetsonDevice Error (장치 수정 실패): $e');
+      debugPrint('🚨 [수정 에러] 상세 내용: $e');
       return false;
     }
   }
