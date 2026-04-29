@@ -20,6 +20,8 @@ def token_required(f):
         try:
             # "Bearer <token>" 형식에서 토큰 추출
             token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+            if not token:
+                return {"error": "토큰이 비어있습니다."}, 401
         except IndexError:
             return {"error": "유효하지 않은 토큰 형식입니다."}, 401
 
@@ -65,7 +67,7 @@ class AuthService:
 
         # 사용자의 직급/레벨 정보 가져오기
         role_name = user.role_info.role_name if user.role_info else "ROLE_USER"
-        role_level = user.role_info.level if user.role_info else 1
+        role_level = user.role_info.level if user.role_info else 3
 
         payload = {
             'user_id': user.id,

@@ -23,6 +23,6 @@ class User(db.Model):
             "email": self.email,
             "name": self.name,
             "role_name": self.role_info.role_name if self.role_info else None,
-            "level": self.role_info.level if self.role_info else 1,
+            "level": self.role_info.level if self.role_info else 3,
             "created_at": self.created_at.isoformat()
         }

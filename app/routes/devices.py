@@ -147,16 +147,16 @@ class DeviceDetail(Resource):
         return {"message": "기기 정보가 수정되었습니다.", "device": device.to_dict()}, HTTPStatus.OK
 
     @devices_ns.doc(
-        description='Jetson 기기를 시스템에서 삭제합니다. (최고관리자 레벨 1 전용)',
+        description='Jetson 기기를 시스템에서 삭제합니다. (관리자 레벨 2 이상)',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
     )
     @token_required
     def delete(self, current_user, device_id):
-        """Jetson 기기 삭제 (최고관리자 레벨 1 전용)"""
+        """Jetson 기기 삭제 (관리자 레벨 2 이상)"""
         user_level = current_user.role_info.level if current_user.role_info else 3
 
-        if user_level > 1:
-            return {"error": "접근 거부: 기기 삭제는 최고관리자(레벨 1)만 가능합니다."}, HTTPStatus.FORBIDDEN
+        if user_level > 2:
+            return {"error": "접근 거부: 기기 삭제는 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
 
         device = JetsonDevice.query.get_or_404(device_id)
         db.session.delete(device)

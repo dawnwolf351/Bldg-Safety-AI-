@@ -18,7 +18,7 @@ user_model = auth_ns.model('UserResponse', {
     'email': fields.String(description='이메일 주소', example='test@naver.com'),
     'name': fields.String(description='사용자 이름', example='홍길동'),
     'role_name': fields.String(description='직급명', example='ROLE_USER'),
-    'level': fields.Integer(description='권한 레벨 (1=일반, 2=관리자, 3=최고관리자)', example=1),
+    'level': fields.Integer(description='권한 레벨 (1=최고관리자, 2=관리자, 3=일반)', example=3),
     'created_at': fields.String(description='가입 일시', example='2024-03-26T12:00:00')
 })
 
@@ -136,7 +136,7 @@ class LoginResource(Resource):
                 "access_token": result['access_token'],
                 "refresh_token": result['refresh_token'],
                 "role": user_info.get('role_name', 'ROLE_USER'),
-                "level": user_info.get('level', 1),
+                "level": user_info.get('level', 3),
                 "user": user_info
             }, HTTPStatus.OK
 
