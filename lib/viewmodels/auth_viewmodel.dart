@@ -31,10 +31,12 @@ class AuthViewModel extends ChangeNotifier {
 
       if (user != null) {
         // 권한 교차 검증: 사용자가 누른 탭(권한)과 실제 가져온 계정의 권한이 다른지 심사
-        if (role != null && user.role != role) {
+        // [수정] super_admin은 admin 탭으로 로그인 시도해도 허용함
+        bool isRoleMatch = user.role == role || (user.role == 'super_admin' && role == 'admin');
+        
+        if (role != null && !isRoleMatch) {
           await _apiService.logout(); // 잘못 발급된 토큰 즉시 무효화
           notifyListeners();
-          // 서버가 실제로 어떤 값을 뱉었는지 화면에 띄워서 확인합니다.
           return '권한 불일치로 로그인 할 수 없습니다.\n[선택한 탭: $role, 서버응답 권한: ${user.role}]';
         }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/device.dart';
 import '../services/api_service.dart';
 
@@ -6,14 +7,43 @@ class DeviceViewModel extends ChangeNotifier {
   List<Device> _devices = [];
   bool _isLoading = false;
   String? _errorMessage;
+  Timer? _pollingTimer; // [추가] 실시간 동기화를 위한 타이머
 
   List<Device> get devices => _devices;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   DeviceViewModel() {
-    // 사용자의 요청으로 로컬 목 데이터(더미 데이터)를 모두 지웁니다.
     _devices = [];
+    startPolling(); // 생성 시 폴링 시작
+  }
+
+  // [추가] 10초마다 서버에서 데이터를 새로 긁어오는 시한폭탄
+  void startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      // 화면이 보고 있을 때만 조용히 새로고침 (로딩바 없이)
+      _silentFetch();
+    });
+  }
+
+  Future<void> _silentFetch() async {
+    try {
+      final latest = await ApiService().getJetsonDevices();
+      // 데이터가 실제로 변했을 때만 UI 갱신 (불필요한 리렌더링 방지)
+      if (latest.length != _devices.length) {
+        _devices = latest;
+        notifyListeners();
+      }
+    } catch (e) {
+      // 폴링 중 에러는 조용히 무시
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel(); // 메모리 누수 방지
+    super.dispose();
   }
 
   // 데이터 fetch (실제 API DB 데이터 긁어오기)
@@ -26,39 +56,36 @@ class DeviceViewModel extends ChangeNotifier {
       // 플러터 앱이 켜질 때 백엔드에 SELECT 요청을 날려서 _devices 배열을 가득 채웁니다!
       _devices = await ApiService().getJetsonDevices();
     } catch (e) {
-      _errorMessage = '서버에서 장치 목록을 불러오는 중 오류가 발생했습니다.';
+      _errorMessage = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // 팀원들이 작성한(작성할) 기존 로직 보존용 껍데기 메서드들
-  Future<void> deleteDevice(int id) async {
-    _devices.removeWhere((device) => device.id == id);
+  // [추가] 에러 메시지 초기화 (스낵바 등으로 보여준 뒤 호출)
+  void clearError() {
+    _errorMessage = null;
     notifyListeners();
   }
 
-  // [추가됨] DB 등록 성공 시, 화면을 즉시 새로고침하기 위해 로컬 배열에 데이터 강제 주입
-  void appendNewDevice(String mac, String name, String location) {
-    final newDevice = Device(
-      id: _devices.isNotEmpty ? _devices.last.id + 1 : 1, // 간단한 더미 ID 부여
-      deviceName: name,
-      location: location,
-      macAddress: mac,
-      isOnline: false, // 새로 설치했으므로 오프라인/대기상태로 판정
-      lastKnownIp: 'IP 무할당',
-      lastConnectedAt: '연결 기록 없음',
-      createdAt: '방금 전 추가됨',
-    );
-    _devices.insert(0, newDevice); // 리스트 맨 위에 노출
-    notifyListeners(); // 이 함수가 호출되어야 화면 뷰가 '아, 목록이 바뀌었구나' 하고 리렌더링 됨!
+  // [추가됨] DB에서 장치 삭제 통신 후 성공 시 화면 새로고침
+  Future<bool> deleteDevice(int id) async {
+    final success = await ApiService().deleteJetsonDevice(id);
+    if (success) {
+      // 서버에서 성공적으로 삭제되었으면 로컬 목록 다시 불러오기
+      await fetchDevices();
+      return true;
+    } else {
+      _errorMessage = '서버에서 장치를 삭제하는데 실패했습니다.';
+      notifyListeners();
+      return false;
+    }
   }
 
   void mapsToAddDevice(BuildContext context) {
     // 기존 지도 / 장치 추가 화면으로 넘어가는 로직 보존
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('장치 추가 지도 화면(mapsToAddDevice)으로 이동합니다.'))
-    );
+        const SnackBar(content: Text('장치 추가 지도 화면(mapsToAddDevice)으로 이동합니다.')));
   }
 }

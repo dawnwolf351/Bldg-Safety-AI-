@@ -53,8 +53,8 @@ class _SettingsViewState extends State<SettingsView> {
                 children: [
                   _buildProfileSection(
                     user?.name ?? '테스트 유저', 
-                    user?.role == 'admin' ? '현장 관리자' : '일반 사용자',
-                    user?.role == 'admin' ? 'FIELD ADMIN' : 'GENERAL USER'
+                    user?.role == 'super_admin' ? '최고관리자' : (user?.role == 'admin' ? '현장 관리자' : '일반 사용자'),
+                    user?.role == 'super_admin' ? 'SUPER ADMIN' : (user?.role == 'admin' ? 'FIELD ADMIN' : 'GENERAL USER')
                   ),
                   const SizedBox(height: 24),
                   _buildSectionTitle('장치 및 AI 설정', 'DEVICE & AI CONFIG', Icons.memory),

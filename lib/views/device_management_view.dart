@@ -48,14 +48,15 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       );
                     }
 
-                    if (viewModel.errorMessage != null) {
-                      return _buildErrorState(
-                          viewModel.errorMessage!, redOffline);
-                    }
-
                     final devices = viewModel.devices;
                     final onlineCount = devices.where((d) => d.isOnline).length;
                     final offlineCount = devices.length - onlineCount;
+
+                    // [수정] 장치 목록이 이미 있는 상태에서 에러가 나면(삭제 실패 등), 전체 화면을 막지 않고 목록은 계속 보여줌
+                    if (viewModel.errorMessage != null && devices.isEmpty) {
+                      return _buildErrorState(
+                          viewModel.errorMessage!, redOffline);
+                    }
 
                     return RefreshIndicator(
                       color: cyanAccent,
@@ -127,7 +128,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                                 child: Column(
                                   children: devices
                                       .map((d) => _buildPremiumDeviceCard(
-                                          d, cyanAccent, redOffline, viewModel))
+                                          d, cyanAccent, redOffline, viewModel, context))
                                       .toList(),
                                 ),
                               ),
@@ -181,12 +182,9 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           ),
         ),
       ),
-      floatingActionButton: Provider.of<AuthViewModel>(context)
-                  .currentUser
-                  ?.role ==
-              'admin'
-          ? FloatingActionButton(
-              onPressed: () {
+      floatingActionButton: Provider.of<AuthViewModel>(context).currentUser?.role != 'viewer' 
+        ? FloatingActionButton(
+            onPressed: () {
                 _showAddDeviceModal(context);
               },
               backgroundColor: const Color(0xFF06B6D4),
@@ -329,7 +327,8 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
   }
 
   Widget _buildPremiumDeviceCard(Device device, Color cyanAccent,
-      Color redOffline, DeviceViewModel viewModel) {
+      Color redOffline, DeviceViewModel viewModel, BuildContext context) {
+    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
     final bool isOnline = device.isOnline;
     final Color statusColor = isOnline ? cyanAccent : redOffline;
     final String statusText = isOnline ? 'Online' : 'Offline';
@@ -470,16 +469,20 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         ],
                       ),
 
-                      // Actions
+                      // Actions (권한별 분기: 최고관리자/현장관리자 제어 가능)
                       Row(
                         children: [
-                          _buildLineArtIconButton(
-                              Icons.edit_outlined, 'Edit', cyanAccent, () {}),
-                          const SizedBox(width: 12),
-                          _buildLineArtIconButton(Icons.delete_outline_rounded,
-                              'Delete', Colors.white70, () {
-                            viewModel.deleteDevice(device.id);
-                          }),
+                          if (userRole == 'admin' || userRole == 'super_admin') ...[
+                            _buildLineArtIconButton(
+                                Icons.edit_outlined, 'Edit', cyanAccent, () {
+                              _showEditDeviceModal(context, device);
+                            }),
+                            const SizedBox(width: 12),
+                            _buildLineArtIconButton(Icons.delete_outline_rounded,
+                                'Delete', Colors.redAccent.withValues(alpha: 0.7), () {
+                              _showDeleteConfirmDialog(context, device, viewModel);
+                            }),
+                          ],
                         ],
                       ),
                     ],
@@ -808,9 +811,8 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return; // 실패 시 모달을 닫지 않고 에러 띄움
                       }
 
-                      // 백엔드 DB 저장 성공 시, 프론트엔드 화면(DeviceViewModel) 리스트에도 즉시 꽂아넣어서 새로고침 트리거!
-                      Provider.of<DeviceViewModel>(context, listen: false)
-                          .appendNewDevice(mac, name, section);
+                      // [수정] 가짜 ID를 부여하는 대신, 서버에서 실제 부여된 ID(auto_increment)를 포함한 목록을 즉시 다시 불러옴
+                      Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
 
                       // 모두 통과했을 경우 성공 처리
                       Navigator.pop(context);
@@ -853,6 +855,163 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
   }
 
   // 모달 내부 입력창 통일 위젯
+  void _showEditDeviceModal(BuildContext context, Device device) {
+    final macController = TextEditingController(text: device.macAddress);
+    final nameController = TextEditingController(text: device.deviceName);
+    final locationController = TextEditingController(text: device.location);
+    const cyanAccent = Color(0xFF06B6D4);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // 키보드 올라올 때 모달이 밀려 올라가도록 허용
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom, // 키보드 높이만큼 여백
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(
+                  top: BorderSide(
+                      color: Color(0xFF1E293B), width: 1)), // 상단 옅은 보더
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'AI 단말 정보 수정',
+                      style: TextStyle(
+                          color: cyanAccent,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _buildModalTextField(
+                    label: 'MAC 주소',
+                    hint: 'ex) 00:1A:2B:3C:4D:5E',
+                    controller: macController),
+                const SizedBox(height: 16),
+                _buildModalTextField(
+                    label: '디바이스 이름',
+                    hint: 'ex) AI 안전 단말기 04호',
+                    controller: nameController),
+                const SizedBox(height: 16),
+                _buildModalTextField(
+                    label: '섹션',
+                    hint: 'ex) 정보공학관 로비',
+                    controller: locationController),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      String mac = macController.text.trim();
+                      String name = nameController.text.trim();
+                      String section = locationController.text.trim();
+
+                      void showError(String msg) {
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(msg,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                            backgroundColor: const Color(0xFFFF3B30),
+                            behavior: SnackBarBehavior.floating,
+                            margin: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).size.height - 100,
+                                left: 20,
+                                right: 20),
+                          ),
+                        );
+                      }
+
+                      // 1. MAC 주소 유효성 검사 (기존 로직 동일)
+                      final macRegex =
+                          RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$');
+                      if (!macRegex.hasMatch(mac)) {
+                        showError('MAC 주소 형식이 올바르지 않습니다.');
+                        return;
+                      }
+
+                      // 2. 디바이스 이름 특수기호 제한 (기존 로직 동일)
+                      final specialCharRegex = RegExp(r'[!@#<>?":_`~;[\]\\|=+)(*&^%$\s-]');
+                      if (specialCharRegex.hasMatch(name)) {
+                        showError('디바이스 이름에는 특수기호를 사용할 수 없습니다.');
+                        return;
+                      }
+
+                      // 3. 섹션(위치) 한글/영문만 허용 (기존 로직 동일)
+                      final textOnlyRegex = RegExp(r'^[가-힣a-zA-Z\s]+$');
+                      if (!textOnlyRegex.hasMatch(section)) {
+                        showError('위치(섹션)는 글자(한글/영문)만 입력 가능합니다.');
+                        return;
+                      }
+
+                      // DB 업데이트 API 호출!
+                      final success = await ApiService().updateJetsonDevice(device.id, mac, name, section);
+
+                      if (!success) {
+                        showError('서버 오류: 장치 정보를 수정하지 못했습니다.');
+                        return;
+                      }
+
+                      // 프론트엔드 리스트 리프레시 (DB 다시 불러오기)
+                      Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
+
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('단말기 정보가 성공적으로 수정되었습니다!', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          backgroundColor: cyanAccent,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cyanAccent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('수정 완료',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A))),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildModalTextField(
       {required String label,
       required String hint,
@@ -886,6 +1045,53 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           ),
         ),
       ],
+    );
+  }
+  void _showDeleteConfirmDialog(BuildContext context, Device device, DeviceViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('장치 삭제', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('${device.deviceName}을(를) 시스템에서 영구적으로 삭제하시겠습니까?', 
+          style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소', style: TextStyle(color: Colors.white24)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await viewModel.deleteDevice(device.id);
+              
+              if (!success && context.mounted) {
+                // 삭제 실패 시 에러 메시지를 스낵바로 띄우고 상태 초기화
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(viewModel.errorMessage ?? '장치 삭제에 실패했습니다.'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+                viewModel.clearError();
+              } else if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('장치가 성공적으로 삭제되었습니다.'),
+                    backgroundColor: Color(0xFF06B6D4),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF3B30),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('삭제', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }

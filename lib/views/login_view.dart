@@ -142,6 +142,7 @@ class _LoginViewState extends State<LoginView> {
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next, // 엔터 누르면 비밀번호 칸으로 이동
                           decoration: _inputDecoration(
                             hint: 'example@email.com',
                             prefixIcon: Icons.mail_outline,
@@ -154,6 +155,8 @@ class _LoginViewState extends State<LoginView> {
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done, // 엔터 누르면 완료(로그인)
+                          onSubmitted: (_) => _handleLogin(), // 엔터 입력 시 로그인 함수 실행
                           decoration: _inputDecoration(
                             hint: '••••••••',
                             prefixIcon: Icons.lock_outline,

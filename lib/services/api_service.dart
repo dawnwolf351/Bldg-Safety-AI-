@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,6 +11,9 @@ class ApiService {
 
   // JWT 토큰을 로컬에 안전하게 보관하는 스토리지
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  
+  // [메모리 캐시 추가] 맥북 시뮬레이터 등 저장소 오류 발생 시 백업용
+  static String? _tokenCache;
 
   // 👉 백엔드 서버 호스팅 주소
   final String _baseUrl = 'http://121.144.41.106:5000'; // 친구분 서버 주소 연동 완료
@@ -86,10 +90,11 @@ class ApiService {
         final String? token =
             response.data['token'] ?? response.data['access_token'];
         if (token != null) {
+          _tokenCache = token; // 메모리에 즉시 백업
           try {
             await _storage.write(key: 'jwt_token', value: token);
           } catch (e) {
-            debugPrint('🚨 맥북 테스트 환경: 토큰 저장 스킵 (-34018 에러 무시)');
+            debugPrint('🚨 맥북 테스트 환경: 토큰 저장소(Storage) 쓰기 실패 - 메모리 캐시 사용');
           }
         }
         final userData = response.data['user'] ?? {};
@@ -107,25 +112,25 @@ class ApiService {
           int rId = backendRoleId is int
               ? backendRoleId
               : int.tryParse(backendRoleId.toString()) ?? 3;
-          if (rId == 1 || rId == 2) {
-            parsedRole = 'admin'; // 최고관리자(1)와 관리자(2) 모두 앱에서는 관리자 탭 허용
+          
+          if (rId == 1) {
+            parsedRole = 'super_admin'; // 최고관리자 구분
+          } else if (rId == 2) {
+            parsedRole = 'admin'; // 일반 관리자
           } else if (rId == 3) {
             parsedRole = 'viewer';
           }
         } else if (backendRoleStr != null) {
           String rawRole = backendRoleStr.toString().trim().toUpperCase();
-          // 숫자(1,2)나 문자(ROLE_ADMIN) 모두 프론트엔드 관리자 탭 허용
-          if (rawRole == '1' ||
-              rawRole == '2' ||
-              rawRole == 'ROLE_ADMIN' ||
-              rawRole == 'ROLE_SUPERADMIN') {
+          
+          if (rawRole == '1' || rawRole == 'ROLE_SUPER_ADMIN' || rawRole == 'ROLE_SUPERADMIN') {
+            parsedRole = 'super_admin';
+          } else if (rawRole == '2' || rawRole == 'ROLE_ADMIN') {
             parsedRole = 'admin';
-          }
-          // 숫자(3)나 문자(ROLE_USER) 형태일 경우 일반 사용자로 허용
-          else if (rawRole == '3' || rawRole == 'ROLE_USER') {
+          } else if (rawRole == '3' || rawRole == 'ROLE_USER') {
             parsedRole = 'viewer';
           } else {
-            parsedRole = rawRole;
+            parsedRole = rawRole.toLowerCase();
           }
         }
 
@@ -133,7 +138,7 @@ class ApiService {
           id: userData['id']?.toString() ??
               response.data['id']?.toString() ??
               'new_user',
-          name: userData['name'] ?? response.data['name'] ?? 'Api User',
+          name: parsedRole == 'super_admin' ? '최고관리자' : (userData['name'] ?? response.data['name'] ?? 'Api User'),
           email: email,
           role: parsedRole,
         );
@@ -216,7 +221,7 @@ class ApiService {
 
       // 친구분이 요구하신 포맷(Content-Type, Authorization)을 100% 동일하게 헤더에 박아 넣습니다.
       final response = await _dio.post(
-        '/api/devices',
+        '/api/devices/', // 백엔드 Swagger 기준 trailing slash 추가
         data: {
           'mac_address': macAddress,
           'device_name': deviceName,
@@ -239,31 +244,122 @@ class ApiService {
     }
   }
 
-  // 7. DB(jetson_devices)에서 전체 장치 목록을 조회(GET)하는 통신 로직
-  Future<List<Device>> getJetsonDevices() async {
+  // DB(jetson_devices)에 기존 장치 수정 프론트엔드 통신 로직 (PUT)
+  Future<bool> updateJetsonDevice(int id, String macAddress, String deviceName, String location) async {
     try {
       final token = await _storage.read(key: 'jwt_token');
-      
-      final response = await _dio.get(
-        '/api/devices', // (백엔드 설계에 따라 /api/jetson_devices 일 수 있음. 친구분 협의 필요)
+
+      // REST API 원칙에 따라 ID를 경로에 포함시킴 (친구분 백엔드 API 설계에 따라 변경될 수 있음)
+      final response = await _dio.put(
+        '/api/devices/$id',
+        data: {
+          'mac_address': macAddress,
+          'device_name': deviceName,
+          'location': location,
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${token ?? ""}',
+          },
+        ),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 308;
+    } catch (e) {
+      debugPrint('🚨 HTTP updateJetsonDevice Error (장치 수정 실패): $e');
+      return false;
+    }
+  }
+
+  // 장치 삭제 로직 (DELETE) - 최고관리자 레벨 1 전용
+  Future<bool> deleteJetsonDevice(int id) async {
+    debugPrint('🗑️ [삭제 시작] 대상 ID: $id');
+    try {
+      String? token = await _storage.read(key: 'jwt_token').catchError((e) => null);
+      token ??= _tokenCache; // 저장소 실패 시 메모리 캐시 사용
+
+      debugPrint('🔑 [삭제 인증] Authorization: Bearer ${token != null ? "TOKEN_EXISTS" : "EMPTY"}');
+
+      final response = await _dio.delete(
+        '/api/devices/$id',
         options: Options(
           headers: {
             'Authorization': 'Bearer ${token ?? ""}',
           },
         ),
       );
+      
+      debugPrint('✅ [삭제 결과] 상태코드: ${response.statusCode}');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      debugPrint('🚨 [삭제 에러] 상세 내용: $e');
+      return false;
+    }
+  }
+
+  // 7. DB(jetson_devices)에서 전체 장치 목록을 조회(GET)하는 통신 로직
+  Future<List<Device>> getJetsonDevices() async {
+    debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
+    try {
+      debugPrint('🔍 [STEP 1] 토큰 읽기 시작...');
+      String? token;
+      try {
+        token = await _storage.read(key: 'jwt_token');
+      } catch (e) {
+        debugPrint('🔍 [STEP 1-ERR] 저장소 읽기 실패, 캐시 확인...');
+      }
+      
+      // 저장소에서 못 읽었으면 메모리 캐시에서 가져옴
+      token ??= _tokenCache;
+      
+      debugPrint('🔍 [STEP 2] 토큰 상태: ${token == null ? "미존재(NULL)" : "존재(OK)"}');
+      
+      debugPrint('🔍 [STEP 3] GET /api/devices/ 요청 시작...');
+      final response = await _dio.get(
+        '/api/devices/',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${token ?? ""}',
+          },
+        ),
+      );
+      debugPrint('🔍 [STEP 4] 응답 수신! 상태코드: ${response.statusCode}');
+      debugPrint('🔍 [STEP 5] 응답 데이터 타입: ${response.data.runtimeType}');
+      debugPrint('🔍 [STEP 6] 응답 원본: ${response.data}');
 
       if (response.statusCode == 200) {
-        // 서버가 "devices": [...] 형태로 주는지, 바로 [...] 배열로 주는지 모두 완벽 호환
-        final List<dynamic> data = response.data['devices'] ?? response.data;
+        // ★ 핵심 수정: 서버가 JSON 문자열(String)로 응답할 경우 먼저 디코딩!
+        dynamic parsed = response.data;
+        if (parsed is String) {
+          parsed = jsonDecode(parsed);
+        }
+
+        List<dynamic> data = [];
+        if (parsed is List) {
+          data = parsed;
+        } else if (parsed is Map && parsed['devices'] != null) {
+          data = parsed['devices'];
+        } else if (parsed is Map && parsed['data'] != null) {
+          data = parsed['data'];
+        } else if (parsed is Map) {
+          // Map인데 devices/data 키가 없으면 Map의 values 중 List를 찾기
+          for (var v in parsed.values) {
+            if (v is List) { data = v; break; }
+          }
+        }
+        
+        debugPrint('🔍 [GET 장치목록] 파싱된 장치 수: ${data.length}개');
         
         return data.map((json) {
           return Device(
-            id: json['id'] ?? 0,
-            deviceName: json['device_name'] ?? '알 수 없는 단말',
-            location: json['location'] ?? '위치 미지정',
-            macAddress: json['mac_address'] ?? '알 수 없음',
-            isOnline: json['is_online'] == true || json['is_online'] == 1,
+            id: (json['id'] ?? json['device_id'] ?? 0) is int 
+                ? json['id'] ?? json['device_id'] ?? 0
+                : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+            deviceName: json['device_name']?.toString() ?? json['name']?.toString() ?? '알 수 없는 단말',
+            location: json['location']?.toString() ?? '위치 미지정',
+            macAddress: json['mac_address']?.toString() ?? '알 수 없음',
+            isOnline: json['is_online'] == true || json['is_online'] == 1 || json['status'] == 'online',
             lastKnownIp: json['last_known_ip']?.toString() ?? 'IP 무할당',
             lastConnectedAt: json['last_connected_at']?.toString() ?? '기록 없음',
             createdAt: json['created_at']?.toString() ?? '방금 전',
@@ -273,7 +369,7 @@ class ApiService {
       return [];
     } catch (e) {
       debugPrint('🚨 HTTP getJetsonDevices Error (목록 조회 실패): $e');
-      return []; // 통신 실패나 404면 빈 배열 반환
+      throw Exception('서버 데이터 파싱 오류 또는 통신 실패: $e');
     }
   }
 }
