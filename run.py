@@ -1,33 +1,43 @@
 import threading
-from app.users.models import Role, User
-from app import create_app, db
-from app.devices.tcp_server import start_tcp_server
+from app import create_app
+from app.extensions import db, bcrypt
+from app.models.role import Role
+from app.models.user import User
+from app.services.tcp_server import start_tcp_server
 
 app = create_app()
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # DB 테이블 자동 생성
-
-        # 🌟 [수정된 부분] 3단계 레벨(Level) 권한 시스템으로 세팅!
+        # 1. 3단계 기본 권한(Role)이 없으면 자동 생성
         if not Role.query.first():
-            # 레벨(level) 속성을 반드시 추가해야 합니다.
-            super_admin_role = Role(role_name='ROLE_SUPER_ADMIN', description='최고 관리자', level=3)
-            admin_role = Role(role_name='ROLE_ADMIN', description='현장 관리자', level=2)
-            user_role = Role(role_name='ROLE_USER', description='현장 일반 사용자', level=1)
-
-            db.session.add(super_admin_role)
-            db.session.add(admin_role)
-            db.session.add(user_role)
+            db.session.add(Role(role_name='ROLE_SUPER_ADMIN', description='최고 관리자', level=1))
+            db.session.add(Role(role_name='ROLE_ADMIN', description='현장 관리자', level=2))
+            db.session.add(Role(role_name='ROLE_USER', description='일반 사용자', level=3))
             db.session.commit()
-            print("✅ [시스템] 3단계 기본 권한(SUPER_ADMIN, ADMIN, USER)이 DB에 성공적으로 세팅되었습니다!")
+            print("[시스템] 3단계 기본 권한이 DB에 생성되었습니다.")
 
-    # 🌟 TCP 소켓 서버를 백그라운드 쓰레드로 실행!
-    # (주의: start_tcp_server 함수가 app 인자를 받도록 구현되어 있어야 합니다)
+        # 2. 최고관리자 계정이 없으면 자동 생성
+        super_admin_email = "boss@capstone.com"
+        if not User.query.filter_by(email=super_admin_email).first():
+            super_role = Role.query.filter_by(role_name="ROLE_SUPER_ADMIN").first()
+            if super_role:
+                super_admin = User(
+                    email=super_admin_email,
+                    password_hash=bcrypt.generate_password_hash("boss1234!").decode('utf-8'),
+                    name="최고관리자",
+                    role_id=super_role.id
+                )
+                db.session.add(super_admin)
+                db.session.commit()
+                print(f"[시스템] 최고관리자 계정({super_admin_email})이 자동 생성되었습니다.")
+
+    # TCP 소켓 서버를 백그라운드 스레드로 실행 (포트 5001)
     tcp_thread = threading.Thread(target=start_tcp_server, args=(app,))
     tcp_thread.daemon = True
     tcp_thread.start()
 
-    # Flask 웹 서버 실행 (얘는 메인 쓰레드에서 돕니다)
-    app.run(debug=True, port=8080, use_reloader=False)
-    # (주의: use_reloader=False를 안 하면 쓰레드가 2개씩 생겨서 충돌납니다)
+    # Flask 웹 서버 실행 (메인 스레드, 포트 5000)
+    # use_reloader=False: 스레드 중복 생성 방지
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+
