@@ -5,7 +5,7 @@ from datetime import datetime
 class JetsonDevice(db.Model):
     __tablename__ = 'jetson_devices'
 
-    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, primary_key=True)
     mac_address = db.Column(db.String(17), nullable=False, unique=True)       # MAC 주소 (예: 00:1A:2B:3C:4D:5E)
     device_name = db.Column(db.String(100), nullable=False)                   # 장치 이름 (예: 1공장 입구)
     last_known_ip = db.Column(db.String(50), nullable=True)                   # 마지막 연결 IP (참고용)
@@ -19,7 +19,7 @@ class JetsonDevice(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id,
+            "device_id": self.device_id,
             "mac_address": self.mac_address,
             "device_name": self.device_name,
             "last_known_ip": self.last_known_ip,

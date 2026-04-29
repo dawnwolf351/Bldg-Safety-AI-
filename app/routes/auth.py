@@ -161,6 +161,8 @@ class RefreshResource(Resource):
         """토큰 갱신 (세션 연장)"""
         try:
             data = request.get_json(silent=True)
+            if not data:
+                return {"error": "요청 본문(body)이 비어있습니다. refresh_token을 JSON으로 보내주세요."}, HTTPStatus.BAD_REQUEST
             refresh_token = data.get('refresh_token')
             extend = data.get('extend', False)
 

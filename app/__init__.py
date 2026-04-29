@@ -9,6 +9,7 @@ from app.routes.users import users_ns
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.url_map.strict_slashes = False  # /api/devices와 /api/devices/ 모두 허용 (308 방지)
 
     # 한글 유니코드 변환 방지
     app.json.ensure_ascii = False
@@ -29,6 +30,7 @@ def create_app():
         from app.models.role import Role
         from app.models.user import User
         from app.models.device import JetsonDevice
+        from app.models.building import Building, Defect
         db.create_all()
 
     # 기본 루트 경로 (접속 확인용)

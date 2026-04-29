@@ -22,7 +22,7 @@ device_update_model = devices_ns.model('DeviceUpdate', {
 })
 
 device_response_model = devices_ns.model('DeviceResponse', {
-    'id': fields.Integer(description='기기 고유 ID'),
+    'device_id': fields.Integer(description='기기 고유 ID'),
     'mac_address': fields.String(description='MAC 주소'),
     'device_name': fields.String(description='기기 이름'),
     'last_known_ip': fields.String(description='마지막 접속 IP'),
