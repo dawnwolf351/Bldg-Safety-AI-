@@ -22,6 +22,14 @@ dependencies:
   
   # 다른 컴퓨터(Flask 서버)와 통신하기 위한 소켓 라이브러리
   socket_io_client: ^3.1.4
+  
+  # PDF 보고서 생성 및 미리보기/저장
+  pdf: ^3.11.1
+  printing: ^5.13.3
+  path_provider: ^2.1.5
+  
+  # 날짜 포맷팅
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

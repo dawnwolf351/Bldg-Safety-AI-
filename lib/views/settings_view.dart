@@ -53,6 +53,7 @@ class _SettingsViewState extends State<SettingsView> {
                 children: [
                   _buildProfileSection(
                     user?.name ?? '테스트 유저', 
+                    user?.email ?? 'user@example.com',
                     user?.role == 'super_admin' ? '최고관리자' : (user?.role == 'admin' ? '현장 관리자' : '일반 사용자'),
                     user?.role == 'super_admin' ? 'SUPER ADMIN' : (user?.role == 'admin' ? 'FIELD ADMIN' : 'GENERAL USER')
                   ),
@@ -148,7 +149,7 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildProfileSection(String name, String roleKo, String roleEn) {
+  Widget _buildProfileSection(String name, String email, String roleKo, String roleEn) {
     return _buildCard(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -165,7 +166,9 @@ class _SettingsViewState extends State<SettingsView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
+                  Text(email, style: TextStyle(color: Colors.blueGrey[400], fontSize: 12)),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
@@ -176,9 +179,9 @@ class _SettingsViewState extends State<SettingsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(roleKo, style: TextStyle(color: _cyanAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(roleEn, style: TextStyle(color: _cyanAccent.withValues(alpha: 0.7), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                        Text(roleKo, style: TextStyle(color: _cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 1),
+                        Text(roleEn, style: TextStyle(color: _cyanAccent.withValues(alpha: 0.7), fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
                       ],
                     ),
                   ),
@@ -309,26 +312,44 @@ class _SettingsViewState extends State<SettingsView> {
 
   Widget _buildNotificationSection(SettingsViewModel vm) {
     return _buildCard(
-      child: Column(
-        children: [
-          _buildSwitchTile(
-            titleKo: '긴급 푸시 알림',
-            titleEn: 'Push Notifications',
-            subtitle: '치명적 결함 발견 시 실시간으로 팝업 알림을 받습니다.',
-            icon: Icons.notification_important_outlined,
-            value: vm.pushNotifications,
-            onChanged: (val) => vm.togglePushNotifications(val),
-          ),
-          Divider(color: Colors.blueGrey.withValues(alpha: 0.2), height: 1),
-          _buildSwitchTile(
-            titleKo: '소리 및 진동 알림',
-            titleEn: 'Sound & Vibration',
-            subtitle: '위험 경고 시 강력한 진동과 경고음을 발생시킵니다.',
-            icon: Icons.vibration_outlined,
-            value: vm.soundVibration,
-            onChanged: (val) => vm.toggleSoundVibration(val),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Column(
+          children: [
+            _buildSwitchTile(
+              titleKo: '긴급 푸시 알림',
+              titleEn: 'Push Notifications',
+              subtitle: '치명적 결함 발견 시 실시간 팝업 알림',
+              icon: Icons.notification_important_outlined,
+              value: vm.pushNotifications,
+              onChanged: (val) => vm.togglePushNotifications(val),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+            ),
+            _buildSwitchTile(
+              titleKo: '소리 및 진동 알림',
+              titleEn: 'Sound & Vibration',
+              subtitle: '위험 경고 시 강력한 진동과 경고음',
+              icon: Icons.vibration_outlined,
+              value: vm.soundVibration,
+              onChanged: (val) => vm.toggleSoundVibration(val),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+            ),
+            _buildSwitchTile(
+              titleKo: '야간 방해금지',
+              titleEn: 'Do Not Disturb',
+              subtitle: '야간 시간대(22:00~07:00) 알림 무음',
+              icon: Icons.nightlight_outlined,
+              value: false, // 더미 상태
+              onChanged: (val) {},
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -364,7 +385,7 @@ class _SettingsViewState extends State<SettingsView> {
           _buildListTile(
             titleKo: '진단 보고서 내보내기',
             titleEn: 'Export Inspection Report',
-            subtitle: '최근 진단된 데이터를 PDF 또는 엑셀 형식으로 추출합니다.',
+            subtitle: '최근 진단된 데이터를 PDF 형식으로 추출',
             icon: Icons.picture_as_pdf_outlined,
             onTap: () async {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('보고서를 생성하는 중...'), backgroundColor: Colors.blueGrey));
@@ -372,23 +393,11 @@ class _SettingsViewState extends State<SettingsView> {
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('보고서 다운로드가 완료되었습니다.', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), backgroundColor: _cyanAccent));
             },
           ),
-          Divider(color: Colors.blueGrey.withValues(alpha: 0.2), height: 1),
-          _buildListTile(
-            titleKo: '저장소 캐시 정리',
-            titleEn: 'Clear Cache',
-            subtitle: '기기에 저장된 임시 진단 영상 데이터를 삭제하여 용량을 비웁니다.',
-            icon: Icons.cleaning_services_outlined,
-            onTap: () async {
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('캐시 데이터를 지우는 중...'), backgroundColor: Colors.blueGrey));
-               await vm.clearCache();
-               if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('임시 데이터가 삭제되었습니다.', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), backgroundColor: _cyanAccent));
-            },
-          ),
-          Divider(color: Colors.blueGrey.withValues(alpha: 0.2), height: 1),
+          Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
           _buildListTile(
             titleKo: '앱 버전 정보',
             titleEn: 'App Info',
-            subtitle: '현재 버전 v1.0.0 (최신 빌드)\n오픈소스 라이선스 확인',
+            subtitle: '현재 버전 v1.0.0 (최신 빌드)',
             icon: Icons.info_outline,
             onTap: () {
                showAboutDialog(

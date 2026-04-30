@@ -1,119 +1,77 @@
-# Byte-compiled / optimized / DLL files
+# 🚀 Flutter Source (절대 무시하면 안됨!)
+!lib/
+!ios/
+!android/
+!macos/
+!web/
+!linux/
+!windows/
+
+# 🐍 Python / Flask
 __pycache__/
-*.py[codz]
+*.py[cod]
 *$py.class
 *.pyo
-
-# C extensions
-*.so
-
-# Distribution / packaging
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py.cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Flask / Django / Web
-instance/
-.webassets-cache
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-.env
-.envrc
-
-# Environments (가상환경)
-.venv/
+env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.venv/
+instance/
+.webassets-cache
+.env
+.envrc
+db.sqlite3
+db.sqlite3-journal
 
-# Jetson / AI Model files (용량이 커서 제외)
-models/
-*.engine
-*.onnx
-*.pt
-
-# Installation / Archive files
-archive/
-*.deb
-
-# IDEs
-.vscode/
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Flutter / Dart / Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# 📱 Flutter / Dart
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
 .flutter_sdk_backup
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/android/local.properties
+**/android/key.properties
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
 
-# Android/iOS specific
-/android/app/debug
-/android/app/profile
-/android/app/release
-app.*.symbols
-app.*.map.json
+# 🤖 AI / Jetson
+models/
+*.engine
+*.onnx
+*.pt
+archive/
+*.deb
 
-# Miscellaneous
-*.class
+# 💻 IDEs & System
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
 *.log
-*.swp
-.atom/
-.buildlog/
-.history
-.svn/
-.pdm-python
-.pdm-build/
-.pixi
 
-# App related ignore
+# 📦 Distribution
+dist/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+
+# 🏗 Etc
 backend/
 services_old/
 migrate_working_dir/
+node_modules/

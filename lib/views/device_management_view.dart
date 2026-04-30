@@ -831,9 +831,11 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       }
 
                       // [수정] 가짜 ID를 부여하는 대신, 서버에서 실제 부여된 ID(auto_increment)를 포함한 목록을 즉시 다시 불러옴
+                      if (!context.mounted) return;
                       Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
 
                       // 모두 통과했을 경우 성공 처리
+                      if (!context.mounted) return;
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -994,6 +996,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       }
 
                       // 프론트엔드 리스트 리프레시 (DB 다시 불러오기)
+                      if (!context.mounted) return;
                       Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
 
                       if (!context.mounted) return;

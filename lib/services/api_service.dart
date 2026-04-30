@@ -14,6 +14,10 @@ class ApiService {
   
   // [메모리 캐시 추가] 맥북 시뮬레이터 등 저장소 오류 발생 시 백업용
   static String? _tokenCache;
+  static String? _refreshTokenCache; // refresh_token 별도 캐시
+
+  // [토큰 갱신 중복 방지] 여러 요청이 동시에 401을 받을 때 refresh를 한 번만 수행
+  bool _isRefreshing = false;
 
   // 👉 백엔드 서버 호스팅 주소
   final String _baseUrl = 'http://121.144.41.106:5000'; // 친구분 서버 주소 연동 완료
@@ -24,19 +28,87 @@ class ApiService {
         const Duration(seconds: 30); // 타임아웃 30초로 대폭 연장 (서버 딜레이 방어)
     _dio.options.receiveTimeout = const Duration(seconds: 30);
 
-    // [인터셉터] 모든 요청에 토큰 자동 탑재
+    // [인터셉터] 모든 요청에 토큰 자동 탑재 + 401 시 자동 갱신
     _dio.interceptors
         .add(InterceptorsWrapper(onRequest: (options, handler) async {
-      final token = await _storage.read(key: 'jwt_token');
+      // 메모리 캐시 우선, 없으면 저장소에서 읽기
+      String? token = _tokenCache;
+      token ??= await _storage.read(key: 'jwt_token').catchError((e) => null);
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
       }
       return handler.next(options);
     }, onError: (DioException e, handler) async {
-      if (e.response?.statusCode == 401) {
-        //debugPrint('토큰 만료 혹은 비정상 접근 (401)');
+      final requestOptions = e.requestOptions;
+
+      // refresh 요청 자체가 401이면 무한루프 방지 → 즉시 로그아웃
+      if (requestOptions.path.contains('/api/auth/refresh')) {
+        debugPrint('🚨 [인터셉터] Refresh 토큰마저 만료됨 → 강제 로그아웃');
         await logout();
+        return handler.next(e);
       }
+
+      // 401 에러 → 토큰 자동 갱신 시도
+      if (e.response?.statusCode == 401 && !_isRefreshing) {
+        _isRefreshing = true;
+        debugPrint('🔄 [인터셉터] 401 감지! 토큰 자동 갱신 시도 중...');
+
+        try {
+          // refresh_token을 사용하여 새 access_token 발급
+          String? refreshToken = _refreshTokenCache;
+          refreshToken ??= await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
+
+          if (refreshToken == null) {
+            debugPrint('🚨 [인터셉터] Refresh 토큰 없음 → 갱신 불가 (로그인 필요)');
+            _isRefreshing = false;
+            return handler.next(e);
+          }
+
+          final refreshResponse = await Dio(BaseOptions(
+            baseUrl: _baseUrl,
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 10),
+          )).post(
+            '/api/auth/refresh',
+            options: Options(headers: {
+              'Authorization': 'Bearer $refreshToken',
+            }),
+          );
+
+          if (refreshResponse.statusCode == 200) {
+            final String? newToken = refreshResponse.data['token'] 
+                ?? refreshResponse.data['access_token'];
+
+            if (newToken != null) {
+              // 새 토큰 저장 (메모리 + 저장소)
+              _tokenCache = newToken;
+              try {
+                await _storage.write(key: 'jwt_token', value: newToken);
+              } catch (_) {}
+
+              debugPrint('✅ [인터셉터] 토큰 갱신 성공! 원래 요청 재시도...');
+
+              // 원래 요청을 새 토큰으로 재시도
+              requestOptions.headers['Authorization'] = 'Bearer $newToken';
+              
+              final retryResponse = await _dio.fetch(requestOptions);
+              _isRefreshing = false;
+              return handler.resolve(retryResponse);
+            }
+          }
+
+          // refresh 실패 → 로그아웃하지 않고 에러만 전파 (세션 타이머가 처리)
+          debugPrint('🚨 [인터셉터] 토큰 갱신 실패 (서버 응답: ${refreshResponse.statusCode})');
+          _isRefreshing = false;
+          return handler.next(e);
+
+        } catch (refreshError) {
+          debugPrint('🚨 [인터셉터] 토큰 갱신 중 예외 발생: $refreshError');
+          _isRefreshing = false;
+          return handler.next(e);
+        }
+      }
+
       return handler.next(e);
     }));
   }
@@ -96,6 +168,15 @@ class ApiService {
           } catch (e) {
             debugPrint('🚨 맥북 테스트 환경: 토큰 저장소(Storage) 쓰기 실패 - 메모리 캐시 사용');
           }
+        }
+        // refresh_token도 별도 저장 (Flask JWT Extended 표준)
+        final String? refreshToken = response.data['refresh_token'];
+        if (refreshToken != null) {
+          _refreshTokenCache = refreshToken;
+          try {
+            await _storage.write(key: 'jwt_refresh_token', value: refreshToken);
+          } catch (_) {}
+          debugPrint('✅ [로그인] Refresh Token 저장 완료');
         }
         final userData = response.data['user'] ?? {};
 
@@ -176,8 +257,11 @@ class ApiService {
 
   // 3. 로그아웃 (토큰 영구 파기)
   Future<void> logout() async {
+    _tokenCache = null; // 메모리 캐시도 초기화
+    _refreshTokenCache = null;
     try {
       await _storage.delete(key: 'jwt_token');
+      await _storage.delete(key: 'jwt_refresh_token');
     } catch (e) {
       // 맥OS 로컬 권한 충돌 무시
     }
@@ -192,17 +276,34 @@ class ApiService {
     }
   }
 
-  // 5. 토큰 연장 (Refresh API HTTP 요청)
+  // 5. 토큰 연장 (Refresh API HTTP 요청) - 세션 경고 팝업에서 호출됨
   Future<bool> refreshToken() async {
     try {
-      final response = await _dio.post('/api/auth/refresh');
-      // 친구 서버에서 200 성공을 뱉으며 새 토큰을 껴서 넘겨준다고 가정
+      // refresh_token을 사용 (access_token 아님!)
+      String? refreshTk = _refreshTokenCache;
+      refreshTk ??= await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
+
+      if (refreshTk == null) {
+        debugPrint('🚨 [토큰 연장] Refresh Token 없음 → 연장 불가');
+        return false;
+      }
+
+      final response = await _dio.post(
+        '/api/auth/refresh',
+        options: Options(headers: {
+          'Authorization': 'Bearer $refreshTk',
+        }),
+      );
       if (response.statusCode == 200) {
         final String? newToken =
             response.data['token'] ?? response.data['access_token'];
         if (newToken != null) {
-          await _storage.write(key: 'jwt_token', value: newToken);
-          return true; // 성공!
+          _tokenCache = newToken; // 메모리 캐시 업데이트
+          try {
+            await _storage.write(key: 'jwt_token', value: newToken);
+          } catch (_) {}
+          debugPrint('✅ [토큰 연장] 수동 Refresh 성공!');
+          return true;
         }
       }
       return false;
