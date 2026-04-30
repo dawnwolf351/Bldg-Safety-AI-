@@ -160,11 +160,11 @@ class AuthViewModel extends ChangeNotifier {
   void startSessionTimer() async {
     cancelTimers();
 
-    // 서버 토큰의 디코딩 여부와 무관하게, 프론트엔드에서 수동으로 기준 시간 강제 할당
-    // Access Token 15분 기준 (900초). 만료 1분 전(14분 = 840초)에 경고 팝업 발생!
-    int showPopupAfterSeconds = 14 * 60;
+    // 서버 스펙: Access Token 5분(300초) 만료, Refresh Token 30분(1800초) 만료
+    // Access Token 만료 1분 전(4분 = 240초)에 경고 팝업 발생!
+    int showPopupAfterSeconds = 4 * 60;
 
-    debugPrint('⏳ [정적 세션 타이머] 프론트엔드 강제 15분 세션(액세스 토큰) 가동. 14분 뒤 경고 알람 예약.');
+    debugPrint('⏳ [세션 타이머] Access Token 5분 기준, 4분 뒤 경고 팝업 예약. (Refresh Token 30분)');
 
     _sessionTimer = Timer(Duration(seconds: showPopupAfterSeconds), () {
       _showSessionWarningPopup();
