@@ -32,7 +32,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)  # 비밀번호는 나중에 암호화 저장!
     name = db.Column(db.String(50), nullable=False)
 
-    # 🌟 핵심: Role 테이블의 id를 가져와서 내 직급으로 삼습니다.
+    #  핵심: Role 테이블의 id를 가져와서 내 직급으로 삼습니다.
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

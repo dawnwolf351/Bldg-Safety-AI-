@@ -2,7 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from datetime import datetime
 from app import db
 
-# 🌟 핵심 수정: Building과 Defect 모델을 합쳐진 하나의 파일에서 동시에 가져옵니다!
+# 핵심 수정: Building과 Defect 모델을 합쳐진 하나의 파일에서 동시에 가져옵니다!
 from app.models.building import Building, Defect
 
 # ==========================================
@@ -53,7 +53,7 @@ class BuildingList(Resource):
 
 
 # ==========================================
-# 🚨 3. 결함(Defect) 관련 API 라우트
+#  3. 결함(Defect) 관련 API 라우트
 # ==========================================
 @defect_ns.route('/')
 class DefectList(Resource):
