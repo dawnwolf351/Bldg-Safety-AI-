@@ -8,7 +8,7 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     role_name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(255), nullable=True)
-    level = db.Column(db.Integer, nullable=False, default=1)
+    level = db.Column(db.Integer, nullable=False, default=3)
 
     # Role ↔ User 관계 설정
     users = db.relationship('User', backref='role_info', lazy=True)

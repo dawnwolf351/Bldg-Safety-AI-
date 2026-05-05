@@ -28,7 +28,7 @@ login_success_model = auth_ns.model('LoginResponse', {
     'access_token': fields.String(description='JWT 액세스 토큰 (5분 만료)'),
     'refresh_token': fields.String(description='JWT 리프레시 토큰 (30분 만료)'),
     'role': fields.String(description='직급명', example='ROLE_USER'),
-    'level': fields.Integer(description='권한 레벨', example=1),
+    'level': fields.Integer(description='권한 레벨', example=3),
     'user': fields.Nested(user_model, description='사용자 상세 정보')
 })
 
@@ -85,6 +85,8 @@ class RegisterResource(Resource):
         """사용자 회원가입 (role_id 기반 3단계 권한)"""
         try:
             data = request.get_json(silent=True)
+            if not data:
+                return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
             email = data.get('email')
             password = data.get('password')
             name = data.get('name')
@@ -121,6 +123,8 @@ class LoginResource(Resource):
         """사용자 로그인 (레벨 정보 포함)"""
         try:
             data = request.get_json(silent=True)
+            if not data:
+                return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
             email = data.get('email')
             password = data.get('password')
 
@@ -186,8 +190,26 @@ class RefreshResource(Resource):
 
 @auth_ns.route('/logout')
 class LogoutResource(Resource):
-    @auth_ns.doc(id='logout_user', description='로그아웃 처리. 클라이언트에서 토큰을 삭제합니다.')
+    @auth_ns.doc(
+        id='logout_user',
+        description='로그아웃 처리. Access Token을 블랙리스트에 등록하고 Refresh Token을 폐기합니다.',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
     @auth_ns.response(code=200, description='로그아웃 성공', model=logout_response)
     def post(self):
-        """사용자 로그아웃"""
+        """사용자 로그아웃 (Redis 블랙리스트 등록)"""
+        auth_header = request.headers.get('Authorization')
+        access_token = None
+
+        if auth_header and ' ' in auth_header:
+            access_token = auth_header.split(' ')[1]
+
+        # body에서 refresh_token 가져오기 (선택)
+        data = request.get_json(silent=True)
+        refresh_token = data.get('refresh_token') if data else None
+
+        # Redis에 블랙리스트 등록 & Refresh Token 폐기
+        if access_token:
+            AuthService.logout(access_token, refresh_token)
+
         return {"message": "로그아웃 되었습니다."}, HTTPStatus.OK

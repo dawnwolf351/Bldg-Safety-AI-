@@ -17,6 +17,7 @@ device_register_model = devices_ns.model('DeviceRegister', {
 })
 
 device_update_model = devices_ns.model('DeviceUpdate', {
+    'mac_address': fields.String(description='MAC 주소', example='AA:BB:CC:DD:EE:11'),
     'device_name': fields.String(description='기기 이름', example='1공장 정문 카메라'),
     'location': fields.String(description='설치 위치', example='A동 1층')
 })
@@ -138,6 +139,12 @@ class DeviceDetail(Resource):
         device = JetsonDevice.query.get_or_404(device_id)
         data = request.get_json()
 
+        if 'mac_address' in data:
+            # 다른 기기와 MAC 주소 중복 체크
+            existing = JetsonDevice.query.filter_by(mac_address=data['mac_address']).first()
+            if existing and existing.device_id != device.device_id:
+                return {"error": "이미 다른 기기에 등록된 MAC 주소입니다."}, HTTPStatus.CONFLICT
+            device.mac_address = data['mac_address']
         if 'device_name' in data:
             device.device_name = data['device_name']
         if 'location' in data:

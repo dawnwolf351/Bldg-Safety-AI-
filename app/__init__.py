@@ -1,10 +1,12 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
-from app.extensions import bcrypt, db, api
+from app.extensions import bcrypt, db, api, redis_client
+import app.extensions as extensions
 from app.routes.auth import auth_ns
 from app.routes.devices import devices_ns
 from app.routes.users import users_ns
+from app.routes.buildings import building_ns, defect_ns
 
 def create_app():
     app = Flask(__name__)
@@ -20,10 +22,27 @@ def create_app():
     api.init_app(app)
     CORS(app)  # 외부 IP에서 API 호출 허용
 
+    # Redis 초기화 (토큰 블랙리스트 & 세션 관리)
+    import redis
+    extensions.redis_client = redis.Redis(
+        host=app.config['REDIS_HOST'],
+        port=app.config['REDIS_PORT'],
+        db=app.config['REDIS_DB'],
+        decode_responses=True
+    )
+    try:
+        extensions.redis_client.ping()
+        print("[시스템] Redis 연결 성공")
+    except redis.ConnectionError:
+        print("[경고] Redis 연결 실패 — 토큰 블랙리스트 기능이 비활성화됩니다.")
+        extensions.redis_client = None
+
     # 네임스페이스 등록
     api.add_namespace(auth_ns, path='/api/auth')
     api.add_namespace(devices_ns, path='/api/devices')
     api.add_namespace(users_ns, path='/api/users')
+    api.add_namespace(building_ns, path='/api/buildings')
+    api.add_namespace(defect_ns, path='/api/defects')
 
     # DB 모델 임포트 및 테이블 자동 생성
     with app.app_context():
