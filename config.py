@@ -11,6 +11,11 @@ class Config:
     # JWT 토큰 만료 시간 (초 단위)
     JWT_ACCESS_TOKEN_EXPIRES = 300       # Access Token: 5분
     JWT_REFRESH_TOKEN_EXPIRES = 1800     # Refresh Token: 30분
+
+    # Redis 설정 (토큰 블랙리스트 & 세션 관리)
+    REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+    REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+    REDIS_DB = int(os.getenv('REDIS_DB', 0))
     
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = os.getenv('DB_PORT', '3306')
