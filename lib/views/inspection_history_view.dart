@@ -23,49 +23,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
   final Color _orangeWarning = const Color(0xFFFF9F0A);
   final Color _greenSafe = const Color(0xFF34C759);
 
-  // 시각화 목적의 더미 데이터 목록
-  final List<Map<String, dynamic>> _dummyHistory = [
-    {
-      'title': '성수대교 북단 교각 3번',
-      'subtitle': '균열 및 철근 노출 2건 감지',
-      'date': '2026. 04. 02  14:30',
-      'status': 'CRITICAL',
-      'confidence': '98%',
-      'imageUrl': 'https://picsum.photos/seed/crack1/400/300',
-    },
-    {
-      'title': '서해대교 주탑 하부 정밀진단',
-      'subtitle': '표면 박리 및 미세 균열 1건',
-      'date': '2026. 04. 01  09:15',
-      'status': 'WARNING',
-      'confidence': '75%',
-      'imageUrl': 'https://picsum.photos/seed/drone5/400/300',
-    },
-    {
-      'title': '잠실대교 남단 상판',
-      'subtitle': '특이사항 없음 (안전)',
-      'date': '2026. 03. 28  11:00',
-      'status': 'SAFE',
-      'confidence': '99%',
-      'imageUrl': 'https://picsum.photos/seed/bridge7/400/300',
-    },
-    {
-      'title': 'A-1 구역 노후 아파트 외벽',
-      'subtitle': '심각한 외벽 크랙 및 누수 흔적',
-      'date': '2026. 03. 25  15:45',
-      'status': 'CRITICAL',
-      'confidence': '92%',
-      'imageUrl': 'https://picsum.photos/seed/wall2/400/300',
-    },
-    {
-      'title': '가양대교 7번 교각 점검',
-      'subtitle': '특이사항 없음 (안전)',
-      'date': '2026. 03. 21  10:20',
-      'status': 'SAFE',
-      'confidence': '96%',
-      'imageUrl': 'https://picsum.photos/seed/safe9/400/300',
-    },
-  ];
+  // 시각화 목적의 더미 데이터 목록 삭제 완료 (실제 DB 연동 대기)
+  final List<Map<String, dynamic>> _dummyHistory = [];
 
   @override
   Widget build(BuildContext context) {
