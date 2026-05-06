@@ -184,10 +184,29 @@ class RefreshResource(Resource):
             traceback.print_exc()
             return {"error": "서버 내부 오류"}, HTTPStatus.INTERNAL_SERVER_ERROR
 
+
 @auth_ns.route('/logout')
 class LogoutResource(Resource):
-    @auth_ns.doc(id='logout_user', description='로그아웃 처리. 클라이언트에서 토큰을 삭제합니다.')
+    @auth_ns.doc(
+        id='logout_user',
+        description='로그아웃 처리. 현재 사용 중인 토큰을 Redis 블랙리스트에 등록하여 무효화합니다.',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
     @auth_ns.response(code=200, description='로그아웃 성공', model=logout_response)
+    @auth_ns.response(code=401, description='유효하지 않거나 이미 로그아웃된 토큰', model=error_model)
     def post(self):
-        """사용자 로그아웃"""
-        return {"message": "로그아웃 되었습니다."}, HTTPStatus.OK
+        """사용자 로그아웃 (Redis 연동)"""
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return {"error": "토큰이 없습니다."}, HTTPStatus.UNAUTHORIZED
+
+        # 헤더에서 토큰 문자열만 쏙 빼기
+        token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+
+        # 서비스 호출해서 Redis에 차단 등록!
+        success, error = AuthService.logout(token)
+
+        if not success:
+            return {"error": error}, HTTPStatus.UNAUTHORIZED
+
+        return {"message": "성공적으로 로그아웃 되었습니다."}, HTTPStatus.OK

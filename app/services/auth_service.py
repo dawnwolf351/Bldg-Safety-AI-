@@ -1,8 +1,9 @@
 import jwt
 import datetime
+import uuid #(토큰 고유 ID 생성용)
 from functools import wraps
 from flask import current_app, request
-from app.extensions import db, bcrypt
+from app.extensions import db, bcrypt, jwt_redis_blocklist
 from app.models.user import User
 from app.models.role import Role
 
@@ -26,6 +27,10 @@ def token_required(f):
         payload, error = AuthService.decode_token(token)
         if error:
             return {"error": error}, 401
+
+        jti = payload.get('jti')
+        if jti and jwt_redis_blocklist.get(jti):
+            return {"error": "로그아웃된 토큰입니다. 다시 로그인해주세요."}, 401
 
         current_user = User.query.get(payload['user_id'])
         if not current_user:
@@ -68,6 +73,7 @@ class AuthService:
         role_level = user.role_info.level if user.role_info else 1
 
         payload = {
+            'jti': uuid.uuid4().hex,
             'user_id': user.id,
             'email': user.email,
             'role': role_name,
@@ -82,6 +88,7 @@ class AuthService:
         """Refresh Token 생성 (30분 만료)"""
         expires = current_app.config.get('JWT_REFRESH_TOKEN_EXPIRES', 1800)
         payload = {
+            'jti': uuid.uuid4().hex,
             'user_id': user.id,
             'email': user.email,
             'type': 'refresh',
@@ -174,4 +181,22 @@ class AuthService:
             return None, "리프레시 토큰이 만료되었습니다. 다시 로그인해주세요."
         except jwt.InvalidTokenError:
             return None, "유효하지 않은 리프레시 토큰입니다."
+
+    @staticmethod
+    def logout(token):
+        """토큰을 Redis 블랙리스트에 등록"""
+        payload, error  = AuthService.decode_token(token)
+        if error:
+            return False, error
+
+        jti = payload.get('jti')
+        exp = payload.get('exp')
+
+        now = datetime.datetime.utcnow().timestamp()
+        ttl = int(exp - now)
+
+        if ttl > 0:
+            jwt_redis_blocklist.set(jti,"logout",ex=ttl)
+
+        return True, None
 
