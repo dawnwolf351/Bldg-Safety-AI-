@@ -24,22 +24,10 @@ class DashboardViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // 임시 더미 데이터 (실제로는 API 호출 파싱)
-    await Future.delayed(const Duration(seconds: 1));
-    _drones = [
-      Drone(id: 'D001', name: '알파 모듈', status: 'flying', batteryLevel: 85),
-      Drone(id: 'D002', name: '베타 모듈', status: 'idle', batteryLevel: 100),
-    ];
-
-    _defects = [
-      Defect(
-        id: 'DF01', 
-        type: 'crack', 
-        severity: 0.8, 
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)), 
-        imageUrl: 'https://via.placeholder.com/150'
-      )
-    ];
+    // 참고: 실제 DB/API 연동으로 교체 필요 (더미 데이터 제거 완료)
+    // await Future.delayed(const Duration(seconds: 1));
+    _drones = [];
+    _defects = [];
 
     _isLoading = false;
     notifyListeners();

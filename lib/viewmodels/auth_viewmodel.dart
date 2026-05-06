@@ -82,10 +82,10 @@ class AuthViewModel extends ChangeNotifier {
       return '전화번호를 입력해주세요.';
     }
 
-    // 전화번호 형식 철통 방어 (010-0000-0000 형식 강제, 한글/영어/특수문자 원천 차단)
-    final phoneRegex = RegExp(r'^010-\d{4}-\d{4}$');
+    // 전화번호 형식 철통 방어 (010-0000-0000 또는 01000000000 모두 허용)
+    final phoneRegex = RegExp(r'^010-?\d{4}-?\d{4}$');
     if (!phoneRegex.hasMatch(phone)) {
-      return '전화번호는 010-0000-0000 형식으로 정확히 입력해주세요.';
+      return '전화번호는 01000000000 형식으로 숫자만 입력하거나 하이픈(-)을 포함해주세요.';
     }
     if (role == 'admin') {
       if (adminCode == null || adminCode.trim().isEmpty) {
@@ -144,11 +144,16 @@ class AuthViewModel extends ChangeNotifier {
         return null; // 에러 메시지가 null이면 가입 성공을 의미 (UI에서 화면 전환)
       } else {
         notifyListeners();
-        return '회원가입 요청이 실패했습니다 (서버 응답 오류).';
+        return '이미 가입된 정보가 있습니다.';
       }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
+      
+      // DioException 등으로 서버 응답 자체가 에러(중복 등)로 떨어졌을 때도 이쪽으로 빠질 수 있음
+      if (e.toString().contains('409') || e.toString().contains('400')) {
+        return '이미 가입된 정보가 있습니다.';
+      }
       return '서버와 통신하는 도중 문제가 발생했습니다.';
     }
   }

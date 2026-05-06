@@ -196,14 +196,16 @@ class ApiService {
           }
         }
 
-        // refresh_token 저장
+        // refresh_token도 별도 저장 (Flask JWT Extended 표준)
         final String? refreshToken = response.data['refresh_token'];
         if (refreshToken != null) {
-          _refreshTokenCache = refreshToken;
+          _refreshTokenCache = refreshToken; // 메모리 캐시 강제 업데이트
           try {
             await _storage.write(key: 'jwt_refresh_token', value: refreshToken);
           } catch (_) {}
-          debugPrint('✅ [로그인] Access + Refresh Token 모두 저장 완료');
+          debugPrint('✅ [로그인] Access + Refresh Token 모두 메모리/저장소 업데이트 완료');
+        } else {
+          debugPrint('⚠️ [로그인] 응답에 refresh_token이 없습니다.');
         }
 
         final userData = response.data['user'] ?? {};
@@ -268,7 +270,7 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('🚨 HTTP SignUp Error: $e');
-      return null;
+      throw Exception(e); // 뷰모델에서 중복 판별을 위해 에러를 던짐
     }
   }
 
@@ -325,15 +327,16 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final String? newAccessToken = response.data['access_token'];
-        if (newAccessToken != null) {
-          _tokenCache = newAccessToken;
+        if (newAccessToken != null && newAccessToken.isNotEmpty) {
+          _tokenCache = newAccessToken; // 메모리 캐시 즉시 업데이트
+          debugPrint('✅ [토큰 연장] 새 Access Token 캐시 업데이트 성공: ${newAccessToken.substring(0, 10)}...');
           try {
             await _storage.write(key: 'jwt_token', value: newAccessToken);
           } catch (_) {}
 
           // extend=true 응답 시 새 refresh_token도 저장
           final String? newRefreshToken = response.data['refresh_token'];
-          if (newRefreshToken != null) {
+          if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
             _refreshTokenCache = newRefreshToken;
             try {
               await _storage.write(key: 'jwt_refresh_token', value: newRefreshToken);
@@ -413,7 +416,25 @@ class ApiService {
   Future<List<Device>> getJetsonDevices() async {
     debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
     try {
-      final response = await _dio.get('/api/devices/');
+      // 명시적으로 토큰을 한 번 더 읽어옵니다.
+      String? token = _tokenCache;
+      token ??= await _storage.read(key: 'jwt_token').catchError((e) => null);
+      
+      if (token == null || token.isEmpty) {
+        debugPrint('🚨 [인증 실패] 토큰이 비어있습니다. 로그인이 필요합니다.');
+        throw Exception('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+      }
+
+      debugPrint('🔑 [인증 확인] 토큰 정상 (앞 10자): ${token.substring(0, 10)}...');
+
+      final response = await _dio.get(
+        '/api/devices/',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
       debugPrint('🔍 [응답] 상태코드: ${response.statusCode}, 데이터 타입: ${response.data.runtimeType}');
 
       if (response.statusCode == 200) {

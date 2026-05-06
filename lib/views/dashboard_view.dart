@@ -10,6 +10,7 @@ import 'inspection_history_view.dart';
 import 'field_monitoring_view.dart';
 import 'structure_management_view.dart';
 import '../services/report_service.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -287,33 +288,41 @@ class _DashboardViewState extends State<DashboardView> {
       ),
       child: Stack(
         children: [
-          // 영상 대기 화면 (추후 실시간 스트림 위젯으로 교체)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  device.isOnline ? Icons.videocam_rounded : Icons.videocam_off_rounded,
-                  color: device.isOnline ? cyanAccent.withValues(alpha: 0.6) : Colors.grey[700],
-                  size: 48,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  device.isOnline ? '실시간 스트림 연결 대기 중...' : '장치가 오프라인 상태입니다',
-                  style: TextStyle(
-                    color: device.isOnline ? cyanAccent.withValues(alpha: 0.8) : Colors.grey[600],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+          // 장치가 온라인이면 실시간 RTSP 스트리밍 표시, 오프라인이면 안내 메시지
+          if (device.isOnline)
+            const Positioned.fill(
+              child: VideoStreamWidget(
+                // 하드코딩된 테스트 URL (추후 device.lastKnownIp 등으로 동적 할당 가능)
+                rtspUrl: 'rtsp://100.84.57.123:8554/ds-test',
+              ),
+            )
+          else
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.videocam_off_rounded,
+                    color: Colors.grey[700],
+                    size: 48,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'AI 영상 분석 모듈 연동 준비 중',
-                  style: TextStyle(color: Colors.grey[700], fontSize: 11),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    '장치가 오프라인 상태입니다',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'AI 영상 분석 모듈 연동 준비 중',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 11),
+                  ),
+                ],
+              ),
             ),
-          ),
           // 좌측 상단 — 장치명 + LIVE 표시
           Positioned(
             top: 12, left: 12,
@@ -796,6 +805,75 @@ class _DashboardViewState extends State<DashboardView> {
           },
         );
       },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// [RTSP 스트리밍 전용 위젯]
+// 젯슨 나노 딥스트림 영상을 Tailscale 환경에서 안정적으로 수신하기 위한 VLC 플레이어
+// -----------------------------------------------------------------------------
+class VideoStreamWidget extends StatefulWidget {
+  final String rtspUrl;
+
+  const VideoStreamWidget({super.key, required this.rtspUrl});
+
+  @override
+  State<VideoStreamWidget> createState() => _VideoStreamWidgetState();
+}
+
+class _VideoStreamWidgetState extends State<VideoStreamWidget> {
+  late VlcPlayerController _vlcViewController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  void _initializePlayer() {
+    _vlcViewController = VlcPlayerController.network(
+      widget.rtspUrl,
+      hwAcc: HwAcc.full, // 모바일 디바이스 하드웨어 가속 필수
+      autoPlay: true,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          // 핫스팟 네트워크 핑 튀는 현상을 방어하기 위한 1.5초(1500ms) 버퍼링
+          VlcAdvancedOptions.networkCaching(1500),
+        ]),
+        http: VlcHttpOptions([
+          VlcHttpOptions.httpReconnect(true),
+        ]),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    // 앱 백그라운드 전환 시 젯슨 리소스 점유 해제를 위해 반드시 dispose 처리
+    _vlcViewController.stopRendererScanning();
+    _vlcViewController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: VlcPlayer(
+        controller: _vlcViewController,
+        aspectRatio: 16 / 9,
+        placeholder: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Color(0xFF00E5FF)),
+              SizedBox(height: 12),
+              Text('스트리밍 연결 중...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

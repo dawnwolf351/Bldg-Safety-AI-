@@ -12,6 +12,9 @@ import 'utils/globals.dart';
 
 // 앱의 시작점(Entry Point)입니다.
 void main() {
+  // 아이폰 실기기에서 네이티브 플러그인(보안 저장소, 동영상 플레이어 등) 초기화 전 멈춤 현상(흰 화면) 방지
+  WidgetsFlutterBinding.ensureInitialized();
+  
   runApp(
     // 1. 상태 관리를 위해 앱의 최상단에 Provider들을 등록합니다.
     // 이렇게 하면 앱의 어느 화면에서든 해당 ViewModel에 접근할 수 있습니다.

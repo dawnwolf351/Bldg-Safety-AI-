@@ -30,6 +30,8 @@ dependencies:
   
   # 날짜 포맷팅
   intl: ^0.19.0
+  # 실시간 RTSP 스트리밍용 VLC 플레이어
+  flutter_vlc_player: ^7.4.1
 
 dev_dependencies:
   flutter_test:

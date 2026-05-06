@@ -71,5 +71,11 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>젯슨 실시간 영상 스트리밍을 위해 로컬 네트워크 접근 권한이 필요합니다.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_rtsp._tcp</string>
+	</array>
 </dict>
 </plist>
