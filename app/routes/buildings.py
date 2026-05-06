@@ -24,6 +24,8 @@ defect_model = defect_ns.model('Defect', {
     'building_id': fields.Integer(required=True, description='건물 ID'),
     'device_id': fields.Integer(required=True, description='탐지 기기(Jetson) ID'),
     'defect_type': fields.String(required=True, description='결함 유형 (예: 화재, 균열)'),
+    'severity': fields.String(description='심각도 (경미/주의/심각)', example='주의'),
+    'image_url': fields.String(description='AI 촬영 결함 사진 경로', example='/uploads/defects/fire_01.jpg'),
     'comment': fields.String(description='상세 설명')
 })
 
@@ -175,6 +177,8 @@ class DefectList(Resource):
                 building_id=data['building_id'],
                 device_id=data['device_id'],
                 defect_type=data['defect_type'],
+                severity=data.get('severity'),
+                image_url=data.get('image_url'),
                 comment=data.get('comment')
             )
             db.session.add(new_defect)
@@ -213,4 +217,3 @@ class DefectDetail(Resource):
         db.session.delete(defect)
         db.session.commit()
         return {"message": f"결함(ID: {defect_id})이 삭제되었습니다."}, HTTPStatus.OK
-
