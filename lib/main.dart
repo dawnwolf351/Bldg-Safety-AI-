@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'utils/theme.dart';
 import 'viewmodels/auth_viewmodel.dart';
@@ -14,6 +15,8 @@ import 'utils/globals.dart';
 void main() {
   // 아이폰 실기기에서 네이티브 플러그인(보안 저장소, 동영상 플레이어 등) 초기화 전 멈춤 현상(흰 화면) 방지
   WidgetsFlutterBinding.ensureInitialized();
+  // media_kit RTSP 스트리밍 엔진 초기화 (flutter_vlc_player 대체)
+  MediaKit.ensureInitialized();
   
   runApp(
     // 1. 상태 관리를 위해 앱의 최상단에 Provider들을 등록합니다.

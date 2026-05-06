@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -10,7 +11,8 @@ import 'inspection_history_view.dart';
 import 'field_monitoring_view.dart';
 import 'structure_management_view.dart';
 import '../services/report_service.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -290,10 +292,24 @@ class _DashboardViewState extends State<DashboardView> {
         children: [
           // 장치가 온라인이면 실시간 RTSP 스트리밍 표시, 오프라인이면 안내 메시지
           if (device.isOnline)
-            const Positioned.fill(
+            Positioned.fill(
               child: VideoStreamWidget(
+                // ★ ValueKey로 장치 전환 시 위젯 강제 재생성 (기존 스트림 해제 → 새 스트림 연결)
+                key: ValueKey('video_${device.id}'),
                 // 하드코딩된 테스트 URL (추후 device.lastKnownIp 등으로 동적 할당 가능)
                 rtspUrl: 'rtsp://100.84.57.123:8554/ds-test',
+                // 전체화면 진입 콜백 — VideoController를 넘겨받아 FullscreenVideoPage에 전달
+                onFullscreen: (videoController) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FullscreenVideoPage(
+                        videoController: videoController,
+                        deviceName: device.deviceName,
+                      ),
+                    ),
+                  );
+                },
               ),
             )
           else
@@ -351,22 +367,27 @@ class _DashboardViewState extends State<DashboardView> {
               ),
             ),
           ),
-          // 우측 상단 — 장치 상태 아이콘
+          // 우측 상단 — 전체화면 버튼 + 장치 상태 아이콘
           Positioned(
             top: 12, right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.memory, color: cyanAccent.withValues(alpha: 0.8), size: 14),
-                  const SizedBox(width: 6),
-                  Icon(Icons.wifi, color: device.isOnline ? Colors.white : Colors.grey[700], size: 14),
-                ],
-              ),
+            child: Row(
+              children: [
+                // 전체화면 버튼은 VideoStreamWidget 내부에서 직접 처리됨
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.memory, color: cyanAccent.withValues(alpha: 0.8), size: 14),
+                      const SizedBox(width: 6),
+                      Icon(Icons.wifi, color: device.isOnline ? Colors.white : Colors.grey[700], size: 14),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           // 하단 — 장치 정보 바
@@ -811,19 +832,31 @@ class _DashboardViewState extends State<DashboardView> {
 
 // -----------------------------------------------------------------------------
 // [RTSP 스트리밍 전용 위젯]
-// 젯슨 나노 딥스트림 영상을 Tailscale 환경에서 안정적으로 수신하기 위한 VLC 플레이어
+// 젯슨 나노 딥스트림 영상을 Tailscale 환경에서 안정적으로 수신하기 위한 media_kit 플레이어
+// flutter_vlc_player → media_kit 전환 (MobileVLCKit이 iOS 26 미지원)
+// [구현 사항]
+//   1. dispose() 비동기 처리 → 크래시 방지
+//   2. didUpdateWidget() → URL 변경 시 플레이어 재초기화
+//   3. ValueKey 기반 강제 재생성 지원 (호출부에서 key 전달)
+//   4. 에러 상태 핸들링 → 무한 로딩 방지 + 재연결 버튼
 // -----------------------------------------------------------------------------
 class VideoStreamWidget extends StatefulWidget {
   final String rtspUrl;
+  final void Function(VideoController controller)? onFullscreen;
 
-  const VideoStreamWidget({super.key, required this.rtspUrl});
+  const VideoStreamWidget({super.key, required this.rtspUrl, this.onFullscreen});
 
   @override
   State<VideoStreamWidget> createState() => _VideoStreamWidgetState();
 }
 
 class _VideoStreamWidgetState extends State<VideoStreamWidget> {
-  late VlcPlayerController _vlcViewController;
+  Player? _player;
+  VideoController? _videoController;
+  bool _hasError = false;
+  String _errorMessage = '';
+  bool _isDisposing = false;
+  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -831,47 +864,343 @@ class _VideoStreamWidgetState extends State<VideoStreamWidget> {
     _initializePlayer();
   }
 
+  // ★ URL이 변경되면(다른 장치 선택 시) 플레이어를 재초기화
+  @override
+  void didUpdateWidget(VideoStreamWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.rtspUrl != widget.rtspUrl) {
+      _disposePlayer().then((_) {
+        if (mounted) {
+          _initializePlayer();
+        }
+      });
+    }
+  }
+
   void _initializePlayer() {
-    _vlcViewController = VlcPlayerController.network(
-      widget.rtspUrl,
-      hwAcc: HwAcc.full, // 모바일 디바이스 하드웨어 가속 필수
-      autoPlay: true,
-      options: VlcPlayerOptions(
-        advanced: VlcAdvancedOptions([
-          // 핫스팟 네트워크 핑 튀는 현상을 방어하기 위한 1.5초(1500ms) 버퍼링
-          VlcAdvancedOptions.networkCaching(1500),
-        ]),
-        http: VlcHttpOptions([
-          VlcHttpOptions.httpReconnect(true),
-        ]),
-      ),
-    );
+    setState(() {
+      _hasError = false;
+      _errorMessage = '';
+      _isPlaying = false;
+    });
+
+    try {
+      // media_kit Player 생성
+      final player = Player();
+
+      // 실시간 스트리밍용 저지연 설정
+      final nativePlayer = player.platform as dynamic;
+      if (nativePlayer != null) {
+        try {
+          // RTSP TCP 강제 (iOS 필수) + 캐시 최소화 (실시간성 확보)
+          nativePlayer.setProperty('rtsp-transport', 'tcp');
+          nativePlayer.setProperty('cache', 'no');
+          nativePlayer.setProperty('demuxer-lavf-o', 'rtsp_transport=tcp');
+        } catch (e) {
+          debugPrint('⚠️ NativePlayer 속성 설정 실패 (무시): $e');
+        }
+      }
+
+      // 비디오 컨트롤러 생성
+      final videoController = VideoController(player);
+
+      // 에러 및 상태 스트림 구독
+      player.stream.error.listen((error) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = error;
+          });
+        }
+      });
+
+      player.stream.playing.listen((playing) {
+        if (mounted && playing && !_isPlaying) {
+          setState(() {
+            _isPlaying = true;
+          });
+        }
+      });
+
+      // RTSP 스트림 열기
+      player.open(Media(widget.rtspUrl));
+
+      if (mounted) {
+        setState(() {
+          _player = player;
+          _videoController = videoController;
+        });
+      }
+    } catch (e) {
+      debugPrint('🚨 media_kit 플레이어 초기화 실패: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = '플레이어 초기화 실패: $e';
+        });
+      }
+    }
+  }
+
+  // 비동기 dispose → 크래시 방지
+  Future<void> _disposePlayer() async {
+    if (_isDisposing) return;
+    _isDisposing = true;
+
+    try {
+      final player = _player;
+      _player = null;
+      _videoController = null;
+
+      if (player != null) {
+        await player.dispose();
+      }
+    } catch (e) {
+      debugPrint('⚠️ media_kit 플레이어 dispose 중 에러 (무시): $e');
+    } finally {
+      _isDisposing = false;
+    }
   }
 
   @override
   void dispose() {
-    // 앱 백그라운드 전환 시 젯슨 리소스 점유 해제를 위해 반드시 dispose 처리
-    _vlcViewController.stopRendererScanning();
-    _vlcViewController.dispose();
+    _disposePlayer();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // 에러 상태 UI
+    if (_hasError) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          color: const Color(0xFF0A0F1A),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Color(0xFFFF6B6B), size: 40),
+                const SizedBox(height: 12),
+                const Text(
+                  '스트리밍 연결 실패',
+                  style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _disposePlayer().then((_) {
+                      if (mounted) _initializePlayer();
+                    });
+                  },
+                  icon: const Icon(Icons.refresh, color: Color(0xFF00E5FF), size: 16),
+                  label: const Text('재연결', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF00E5FF)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 컨트롤러 초기화 대기 중
+    if (_videoController == null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          color: const Color(0xFF0A0F1A),
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF00E5FF)),
+                SizedBox(height: 12),
+                Text('플레이어 초기화 중...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // media_kit Video 위젯으로 스트리밍 렌더링
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: VlcPlayer(
-        controller: _vlcViewController,
-        aspectRatio: 16 / 9,
-        placeholder: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Color(0xFF00E5FF)),
-              SizedBox(height: 12),
-              Text('스트리밍 연결 중...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+      child: Stack(
+        children: [
+          Video(controller: _videoController!),
+          // 영상이 아직 재생되지 않을 때 로딩 오버레이 표시
+          if (!_isPlaying)
+            Container(
+              color: const Color(0xFF0A0F1A),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF00E5FF)),
+                    SizedBox(height: 12),
+                    Text('스트리밍 연결 중...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+          // ★ 전체화면 버튼 (영상 재생 중일 때만 표시, 하단 장치 정보 바 위쪽)
+          if (_isPlaying && widget.onFullscreen != null)
+            Positioned(
+              bottom: 50, right: 10,
+              child: GestureDetector(
+                onTap: () => widget.onFullscreen!(_videoController!),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: const Icon(Icons.fullscreen, color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+// -----------------------------------------------------------------------------
+// [전체화면 영상 뷰]
+// 대시보드의 기존 VideoController를 그대로 받아서 전체화면으로 표시합니다.
+// 새 Player를 생성하지 않으므로 RTSP 재연결 없이 즉시 전체화면 전환됩니다.
+// 진입 시 가로 고정 → 뒤로가기 시 세로 모드 복원
+// -----------------------------------------------------------------------------
+class FullscreenVideoPage extends StatefulWidget {
+  final VideoController videoController;
+  final String deviceName;
+
+  const FullscreenVideoPage({
+    super.key,
+    required this.videoController,
+    required this.deviceName,
+  });
+
+  @override
+  State<FullscreenVideoPage> createState() => _FullscreenVideoPageState();
+}
+
+class _FullscreenVideoPageState extends State<FullscreenVideoPage> {
+  bool _showControls = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // 가로 모드 고정 + 시스템 UI 숨기기 (몰입형 전체화면)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  void _exitFullscreen() {
+    // 세로 모드 복원 + 시스템 UI 표시
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    // 비정상 종료 대비 세로 모드 복원
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // ★ Player를 dispose하지 않음 — 대시보드로 돌아갔을 때 계속 재생해야 하므로
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: () => setState(() => _showControls = !_showControls),
+        child: Stack(
+          children: [
+            // 기존 VideoController를 전체화면으로 표시 (재연결 없음)
+            Positioned.fill(
+              child: Video(
+                controller: widget.videoController,
+                fill: Colors.black,
+              ),
+            ),
+
+            // 컨트롤 오버레이 (탭으로 토글)
+            if (_showControls) ...[
+              // 상단 그라데이션 바
+              Positioned(
+                top: 0, left: 0, right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 장치명 + LIVE 배지
+                        Row(
+                          children: [
+                            Container(
+                              width: 10, height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('LIVE', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                            const SizedBox(width: 16),
+                            Text(widget.deviceName, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        // 전체화면 나가기 버튼
+                        GestureDetector(
+                          onTap: _exitFullscreen,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.fullscreen_exit, color: Colors.white, size: 24),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

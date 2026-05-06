@@ -36,6 +36,6 @@ with app.app_context():
     devices = JetsonDevice.query.all()
     if devices:
         for d in devices:
-            print(f"  id={d.id}, mac={d.mac_address}, name={d.device_name}")
+            print(f"  id={d.device_id}, mac={d.mac_address}, name={d.device_name}")
     else:
         print("  (empty)")
