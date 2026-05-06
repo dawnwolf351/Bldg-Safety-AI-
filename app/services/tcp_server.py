@@ -12,6 +12,8 @@ def handle_client(client_socket, addr, app):
 
     # 백그라운드 스레드에서도 DB를 사용하려면 app_context()가 필요
     with app.app_context():
+        mac = None  # finally에서 오프라인 처리를 위해 미리 초기화
+
         try:
             while True:
                 data = client_socket.recv(1024).decode('utf-8')
@@ -50,6 +52,14 @@ def handle_client(client_socket, addr, app):
         except Exception as e:
             print(f"⚠️ [TCP 서버] 에러 발생: {e}")
         finally:
+            # 연결 종료 시 기기 오프라인 처리
+            if mac:
+                device = JetsonDevice.query.filter_by(mac_address=mac).first()
+                if device:
+                    device.is_online = False
+                    db.session.commit()
+                    print(f"📴 [TCP 서버] 기기({mac}) 오프라인 처리 완료")
+
             client_socket.close()
             print(f"🔌 [TCP 서버] 소켓 통신이 안전하게 닫혔습니다: {addr[0]}")
 

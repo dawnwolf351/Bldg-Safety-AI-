@@ -6,3 +6,5 @@ PyJWT
 flask-sqlalchemy
 pymysql
 cryptography
+redis
+flask-restx
