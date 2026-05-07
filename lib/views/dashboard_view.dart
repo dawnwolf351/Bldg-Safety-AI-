@@ -24,6 +24,11 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   int _currentIndex = 0; // 하단 네비게이션 바 상태 관리
   int _selectedDeviceIndex = 0; // 현재 선택된 장치 인덱스
+  
+  // ★ [캐싱] VideoStreamWidget 재생성 방지
+  // Consumer 리빌드 시 동일 장치면 기존 위젯을 재사용하여 RTSP 재연결 방지
+  int? _cachedDeviceId;
+  Widget? _cachedVideoWidget;
 
   @override
   void initState() {
@@ -196,6 +201,8 @@ class _DashboardViewState extends State<DashboardView> {
 
         // 장치가 없는 경우 안내 UI
         if (devices.isEmpty) {
+          _cachedDeviceId = null;
+          _cachedVideoWidget = null;
           return _buildNoDeviceVideoPlaceholder(cyanAccent);
         }
 
@@ -211,11 +218,23 @@ class _DashboardViewState extends State<DashboardView> {
             _buildDeviceSelector(devices, cyanAccent),
             const SizedBox(height: 12),
             // [2] 선택된 장치의 영상 피드 영역
-            _buildDeviceVideoFeed(selectedDevice, cyanAccent, redEmergency),
+            // ★ 동일 장치면 캐시된 영상 위젯을 재사용 (RTSP 재연결 방지)
+            _buildDeviceVideoFeedCached(selectedDevice, cyanAccent, redEmergency),
           ],
         );
       },
     );
+  }
+
+  // ★ [핵심] 장치가 변경되지 않으면 기존 영상 위젯을 그대로 리턴
+  // DeviceViewModel 폴링으로 Consumer가 리빌드되어도 영상이 끄기지 않음
+  Widget _buildDeviceVideoFeedCached(Device device, Color cyanAccent, Color redEmergency) {
+    // 장치가 바뀌었을 때만 새 영상 위젯 생성
+    if (_cachedDeviceId != device.id) {
+      _cachedDeviceId = device.id;
+      _cachedVideoWidget = _buildDeviceVideoFeed(device, cyanAccent, redEmergency);
+    }
+    return _cachedVideoWidget!;
   }
 
   // 장치 선택 수평 스크롤 탭
@@ -877,35 +896,40 @@ class _VideoStreamWidgetState extends State<VideoStreamWidget> {
     }
   }
 
-  void _initializePlayer() {
+  void _initializePlayer() async {
     setState(() {
       _hasError = false;
       _errorMessage = '';
       _isPlaying = false;
     });
 
+    debugPrint('🎥 [영상 연결 시도] URL: ${widget.rtspUrl}');
+
     try {
       // media_kit Player 생성
       final player = Player();
 
-      // 실시간 스트리밍용 저지연 설정
-      final nativePlayer = player.platform as dynamic;
-      if (nativePlayer != null) {
-        try {
-          // RTSP TCP 강제 (iOS 필수) + 캐시 최소화 (실시간성 확보)
-          nativePlayer.setProperty('rtsp-transport', 'tcp');
-          nativePlayer.setProperty('cache', 'no');
-          nativePlayer.setProperty('demuxer-lavf-o', 'rtsp_transport=tcp');
-        } catch (e) {
-          debugPrint('⚠️ NativePlayer 속성 설정 실패 (무시): $e');
-        }
+      // ★ RTSP TCP 강제 설정 (iOS에서 UDP 차단 대응)
+      // media_kit은 libmpv 기반이므로 mpv 속성명을 사용해야 함
+      try {
+        final nativePlayer = player.platform as dynamic;
+        // ffmpeg/lavf 옵션으로 RTSP TCP 전송 강제
+        await nativePlayer.setProperty('demuxer-lavf-o', 'rtsp_transport=tcp');
+        debugPrint('✅ [mpv] RTSP TCP 모드 설정 완료');
+      } catch (e) {
+        debugPrint('⚠️ [mpv] 속성 설정 실패 (계속 진행): $e');
       }
 
       // 비디오 컨트롤러 생성
       final videoController = VideoController(player);
 
-      // 에러 및 상태 스트림 구독
+      // ────────────────────────────────────
+      // 디버그용 스트림 구독 (모든 상태 변화 추적)
+      // ────────────────────────────────────
+      
+      // 에러 스트림
       player.stream.error.listen((error) {
+        debugPrint('🚨 [Player 에러] $error');
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -914,16 +938,37 @@ class _VideoStreamWidgetState extends State<VideoStreamWidget> {
         }
       });
 
+      // 재생 상태 스트림
       player.stream.playing.listen((playing) {
+        debugPrint('▶️ [Player playing] $playing');
         if (mounted && playing && !_isPlaying) {
-          setState(() {
-            _isPlaying = true;
-          });
+          setState(() => _isPlaying = true);
         }
       });
 
+      // 버퍼링 상태 스트림
+      player.stream.buffering.listen((buffering) {
+        debugPrint('⏳ [Player buffering] $buffering');
+      });
+
+      // 영상 크기 스트림 — 프레임이 실제로 도착했는지 확인하는 가장 확실한 지표
+      player.stream.width.listen((width) {
+        debugPrint('📐 [Player width] $width');
+        if (mounted && width != null && width > 0 && !_isPlaying) {
+          debugPrint('✅ [영상 수신 확인!] 프레임 도착 — 로딩 해제');
+          setState(() => _isPlaying = true);
+        }
+      });
+
+      // 로그 스트림 (mpv 내부 로그)
+      player.stream.log.listen((log) {
+        debugPrint('📋 [mpv ${log.level}] ${log.text}');
+      });
+
       // RTSP 스트림 열기
-      player.open(Media(widget.rtspUrl));
+      debugPrint('🔗 [Player.open] RTSP 스트림 열기 시작...');
+      await player.open(Media(widget.rtspUrl));
+      debugPrint('🔗 [Player.open] 호출 완료 (연결 대기 중...)');
 
       if (mounted) {
         setState(() {
@@ -931,6 +976,19 @@ class _VideoStreamWidgetState extends State<VideoStreamWidget> {
           _videoController = videoController;
         });
       }
+
+      // ★ 15초 타임아웃 — 연결 실패 시 무한 로딩 방지
+      Future.delayed(const Duration(seconds: 15), () {
+        if (mounted && !_isPlaying && !_hasError) {
+          debugPrint('⏰ [타임아웃] 15초 경과 — 영상 미수신. 에러 표시');
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'RTSP 서버 응답 없음 (15초 타임아웃)\n'
+                '• Tailscale 연결 상태를 확인하세요\n'
+                '• Jetson Nano에서 DeepStream이 실행 중인지 확인하세요';
+          });
+        }
+      });
     } catch (e) {
       debugPrint('🚨 media_kit 플레이어 초기화 실패: $e');
       if (mounted) {

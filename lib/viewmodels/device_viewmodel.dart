@@ -30,14 +30,30 @@ class DeviceViewModel extends ChangeNotifier {
   Future<void> _silentFetch() async {
     try {
       final latest = await ApiService().getJetsonDevices();
-      // 데이터가 실제로 변했을 때만 UI 갱신 (불필요한 리렌더링 방지)
-      if (latest.length != _devices.length) {
+      // ★ 데이터가 실제로 변했을 때만 UI 갱신 (deep compare)
+      // 길이만 비교하면 isOnline 변경 등을 놓치고,
+      // 매번 notifyListeners()를 호출하면 VideoStreamWidget이 재생성되어 영상이 끊김
+      if (_isDeviceListChanged(latest)) {
         _devices = latest;
         notifyListeners();
       }
     } catch (e) {
       // 폴링 중 에러는 조용히 무시
     }
+  }
+
+  // 장치 목록이 실제로 변경되었는지 비교 (id, 이름, 온라인 상태 등)
+  bool _isDeviceListChanged(List<Device> latest) {
+    if (latest.length != _devices.length) return true;
+    for (int i = 0; i < latest.length; i++) {
+      if (latest[i].id != _devices[i].id ||
+          latest[i].deviceName != _devices[i].deviceName ||
+          latest[i].isOnline != _devices[i].isOnline ||
+          latest[i].lastKnownIp != _devices[i].lastKnownIp) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
