@@ -427,7 +427,6 @@ class _SignupViewState extends State<SignupView> {
     required TextEditingController controller,
     required String hint,
     required IconData icon,
-    bool highlighted = false,
     TextInputType? keyboardType,
   }) {
     return TextField(
@@ -438,7 +437,6 @@ class _SignupViewState extends State<SignupView> {
         hintText: hint,
         hintStyle: const TextStyle(color: _lightGrey, fontSize: 14),
         prefixIcon: Icon(icon, color: _lightGrey, size: 22),
-        filled: false,
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -487,7 +485,6 @@ class _SignupViewState extends State<SignupView> {
             });
           },
         ),
-        filled: false,
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

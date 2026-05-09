@@ -132,39 +132,8 @@ class ApiService {
   }
 
   // ==========================================
-  // [프론트엔드 UI 테스트용: Dummy 로직 활성화 중]
+  // [인증 API] 현재 프론트 단독 모드 (서버 연동 준비 중)
   // ==========================================
-
-  // 1. Dummy 로그인 (비활성화 상태 - 서버 연결용)
-  /*
-  Future<User?> login(String email, String password,
-      {String? roleOverride}) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    final role = roleOverride ?? 'viewer';
-    return User(
-      id: 'dummy_user_1',
-      name: role == 'admin' ? '현장 관리자(테스트)' : '일반 사용자(테스트)',
-      email: email,
-      role: role,
-    );
-  }
-  */
-
-  // 2. Dummy 회원가입 (비활성화 상태)
-  /*
-  Future<User?> signUp(Map<String, dynamic> requestData) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    final role = requestData['role'] ?? 'viewer';
-    return User(
-      id: 'dummy_user_1',
-      name: requestData['name'] ?? '새로운 사용자',
-      email: requestData['email'] ?? 'test@test.com',
-      role: role,
-    );
-  }
-  */
-
-  // =========== [진짜 서버 연동 코드 활성화] ===========
 
   // 1. HTTP API (REST) 실제 로그인 로직
   // 백엔드 응답 구조:
@@ -176,46 +145,26 @@ class ApiService {
   //   "level": 2,
   //   "user": { "id": 1, "email": "...", "name": "...", "role_name": "ROLE_ADMIN", "level": 2 }
   // }
+  // 1. 로그인 (현재: 프론트 단독 모드)
   Future<User?> login(String email, String password,
       {String? roleOverride}) async {
-    // --- [프론트 단독 개발용: 서버 연동 비활성화 및 항상 성공 처리] ---
-    await Future.delayed(const Duration(milliseconds: 500)); // 실제 통신 느낌을 위한 지연
-    
-    String parsedRole = roleOverride ?? 'viewer';
-    debugPrint('🧪 [FRONTEND ONLY] 서버 연동 없이 로그인 처리 ($parsedRole)');
-    
+    await Future.delayed(const Duration(milliseconds: 500));
+    final String parsedRole = roleOverride ?? 'viewer';
     _tokenCache = 'dummy_token_$parsedRole';
     _refreshTokenCache = 'dummy_refresh_token_$parsedRole';
-    
     return User(
       id: 'dummy_user_${DateTime.now().millisecondsSinceEpoch}',
       name: parsedRole == 'admin' ? '더미 현장관리자' : (parsedRole == 'super_admin' ? '더미 최고관리자' : '더미 일반사용자'),
       email: email,
       role: parsedRole,
     );
-    // ---------------------------------------------------------
-
-    /* 기존 서버 연동 코드는 아래에 주석 처리되어 보존됩니다.
-    try {
-      final response = await _dio.post('/api/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
-      ...
-    } catch (e) {
-      debugPrint('🚨 HTTP Login DB Error: $e');
-      return null;
-    }
-    */
   }
 
-  // 2. HTTP 실제 로컬 DB 회원가입 로직 (프론트 단독 모드)
+  // 2. 회원가입 (현재: 프론트 단독 모드)
   Future<User?> signUp(Map<String, dynamic> requestData) async {
-    // --- [프론트 단독 개발용: 서버 연동 비활성화 및 항상 성공 처리] ---
     await Future.delayed(const Duration(milliseconds: 500));
-    String role = requestData['role'] ?? 'viewer';
+    final String role = requestData['role'] ?? 'viewer';
     return login(requestData['email'], requestData['password'], roleOverride: role);
-    // ---------------------------------------------------------
   }
 
   // 3. 로그아웃 (토큰 영구 파기)
