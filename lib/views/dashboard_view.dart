@@ -5,6 +5,7 @@ import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/device_viewmodel.dart';
 import '../models/device.dart';
+import '../theme/app_colors.dart';
 import 'device_management_view.dart';
 import 'settings_view.dart';
 import 'inspection_history_view.dart';
@@ -30,13 +31,13 @@ class _DashboardViewState extends State<DashboardView> {
   bool? _cachedDeviceOnlineStatus;
   Widget? _cachedVideoWidget;
 
-  // 화이트 테마 디자인 토큰
-  final Color bgOffWhite = const Color(0xFFF8F9FA);
-  final Color cardWhite = const Color(0xFFFFFFFF);
-  final Color textCharcoal = const Color(0xFF212529);
-  final Color textLightGrey = const Color(0xFF6C757D);
-  final Color brandingBlue = const Color(0xFF3761F3);
-  final Color borderLight = const Color(0xFFDEE2E6);
+  // ─── 색상 토큰: AppColors 참조 ──────────────────────────
+  static const Color bgOffWhite   = AppColors.bgOffWhite;
+  static const Color cardWhite    = AppColors.cardWhite;
+  static const Color textCharcoal = AppColors.charcoal;
+  static const Color textLightGrey = AppColors.lightGrey;
+  static const Color brandingBlue = AppColors.brandingBlue;
+  static const Color borderLight  = AppColors.borderLight;
 
   @override
   void initState() {

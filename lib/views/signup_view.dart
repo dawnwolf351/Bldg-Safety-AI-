@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../theme/app_colors.dart';
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -10,13 +11,13 @@ class SignupView extends StatefulWidget {
 }
 
 class _SignupViewState extends State<SignupView> {
-  // ─── 대시보드 동기화 색상 토큰 ───────────────────────────
-  static const Color _bgOffWhite  = Color(0xFFF8F9FA);
-  static const Color _cardWhite   = Color(0xFFFFFFFF);
-  static const Color _charcoal    = Color(0xFF212529);
-  static const Color _lightGrey   = Color(0xFF6C757D);
-  static const Color _brandingBlue = Color(0xFF3761F3);
-  static const Color _borderLight = Color(0xFFDEE2E6);
+  // ─── 색상 토큰: AppColors 참조 ──────────────────────────
+  static const Color _bgOffWhite   = AppColors.bgOffWhite;
+  static const Color _cardWhite    = AppColors.cardWhite;
+  static const Color _charcoal     = AppColors.charcoal;
+  static const Color _lightGrey    = AppColors.lightGrey;
+  static const Color _brandingBlue = AppColors.brandingBlue;
+  static const Color _borderLight  = AppColors.borderLight;
 
   // ─── 기존 로직: 컨트롤러 & 상태 (완벽 보존) ─────────────────
   final TextEditingController _nameController            = TextEditingController();
@@ -161,7 +162,6 @@ class _SignupViewState extends State<SignupView> {
                               controller: _adminCodeController,
                               hint: '인증 코드 입력',
                               icon: Icons.vpn_key_outlined,
-                              highlighted: true,
                             ),
                             const SizedBox(height: 16),
                             _fieldLabel('소속 기관'),
@@ -169,7 +169,6 @@ class _SignupViewState extends State<SignupView> {
                               controller: _companyController,
                               hint: '소속 회사 또는 기관명',
                               icon: Icons.business_outlined,
-                              highlighted: true,
                             ),
                           ],
                         ),

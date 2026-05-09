@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 class StructureManagementView extends StatelessWidget {
   const StructureManagementView({super.key});
 
-  // ─── 대시보드 동기화 색상 토큰 ───────────────────────────
-  static const Color _bgOffWhite  = Color(0xFFF8F9FA);
-  static const Color _cardWhite   = Color(0xFFFFFFFF);
-  static const Color _charcoal    = Color(0xFF212529);
-  static const Color _lightGrey   = Color(0xFF6C757D);
-  static const Color _brandingBlue = Color(0xFF3761F3);
-  static const Color _borderLight = Color(0xFFDEE2E6);
-  
-  static const Color _green = Color(0xFF22C55E);
-  static const Color _red = Color(0xFFEF4444);
-  static const Color _orange = Color(0xFFFFB020);
+  // ─── 색상 토큰: AppColors 참조 ──────────────────────────
+  static const Color _bgOffWhite   = AppColors.bgOffWhite;
+  static const Color _cardWhite    = AppColors.cardWhite;
+  static const Color _charcoal     = AppColors.charcoal;
+  static const Color _lightGrey    = AppColors.lightGrey;
+  static const Color _brandingBlue = AppColors.brandingBlue;
+  static const Color _borderLight  = AppColors.borderLight;
+  static const Color _green        = AppColors.statusGreen;
+  static const Color _red          = AppColors.statusRed;
+  static const Color _orange       = AppColors.statusOrange;
 
   // 더미 구조물 데이터 (로직 보존)
   static final List<Map<String, dynamic>> _dummyStructures = [

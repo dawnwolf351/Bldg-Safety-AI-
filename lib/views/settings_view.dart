@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/settings_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../theme/app_colors.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -11,9 +12,10 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  // ─── 색상 토큰 (대시보드와 동일 팔레트) ────────────────────────
-  static const Color _bgOffWhite  = Color(0xFFF8F9FA);
-  static const Color _cardWhite   = Color(0xFFFFFFFF);
+  // ─── 색상 토큰 ──────────────────────────────────────────────
+  static const Color _bgOffWhite  = AppColors.bgOffWhite;       // 0xFFF8F9FA
+  static const Color _cardWhite   = AppColors.cardWhite;         // 0xFFFFFFFF
+  // 설정 화면만의 고유 색상 (조금 더 진한 턴로 설계됨)
   static const Color _charcoal    = Color(0xFF1A1D21);
   static const Color _lightGrey   = Color(0xFF6B7280);
   static const Color _borderLight = Color(0xFFE5E7EB);
