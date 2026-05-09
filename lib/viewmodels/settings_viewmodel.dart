@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 class SettingsViewModel extends ChangeNotifier {
   // Device & AI Configuration
-  String _droneIp = '192.168.1.100';
+  String _droneIp = '192.168.1.100'; // 기존 드론/장치 IP 설정용 (유지)
   String _dronePort = '5000';
   double _aiThreshold = 0.85; // 0.0 ~ 1.0
+
+  // ─── 접속 기기(Client) IP 관리 ───
+  String _clientIp = '불러오는 중...';
+  String get clientIp => _clientIp;
 
   // Notification Settings
   bool _pushNotifications = true;
@@ -49,5 +54,25 @@ class SettingsViewModel extends ChangeNotifier {
     // 임시 리포트 추출 로직 대기 시간
     await Future.delayed(const Duration(seconds: 1));
     notifyListeners();
+  }
+
+  // 실제 기기의 네트워크 IP(공유기 할당 내부 IP) 자동 감지 로직
+  Future<void> detectClientIp() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+      );
+      
+      if (interfaces.isNotEmpty && interfaces.first.addresses.isNotEmpty) {
+        // 첫 번째 유효한 IPv4 주소를 가져옵니다.
+        _clientIp = interfaces.first.addresses.first.address;
+      } else {
+        _clientIp = 'IP를 찾을 수 없음';
+      }
+    } catch (e) {
+      _clientIp = 'IP 감지 오류';
+    }
+    notifyListeners(); // UI 업데이트
   }
 }

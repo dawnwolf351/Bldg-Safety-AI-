@@ -132,7 +132,7 @@ class _DashboardViewState extends State<DashboardView> {
                   const SizedBox(height: 24),
                   
                   // 2. Summary Cards (영상 밑으로 배치, 타이틀 추가)
-                  Text('AI 추론 인프라 가동상태', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
+                  const Text('AI 추론 인프라 가동상태', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   _buildSummaryCardsGrid(),
                   const SizedBox(height: 24),
@@ -151,15 +151,15 @@ class _DashboardViewState extends State<DashboardView> {
 
   // 모바일용 상단 헤더 (로고)
   Widget _buildMobileHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               Icon(Icons.security, color: brandingBlue, size: 28),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 'VIC SOC 진단 시스템',
                 style: TextStyle(color: textCharcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
@@ -202,9 +202,9 @@ class _DashboardViewState extends State<DashboardView> {
         children: [
           Icon(icon, color: iconColor, size: 24),
           const SizedBox(height: 6),
-          Text(title, style: TextStyle(color: textLightGrey, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(title, style: const TextStyle(color: textLightGrey, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.w900)),
+          Text(value, style: const TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -245,11 +245,11 @@ class _DashboardViewState extends State<DashboardView> {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
+                    const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('실시간 현장 영상 피드', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                       ],
                     ),
                     Container(
@@ -469,18 +469,18 @@ class _DashboardViewState extends State<DashboardView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.sensors_off, color: textLightGrey, size: 48),
+            const Icon(Icons.sensors_off, color: textLightGrey, size: 48),
             const SizedBox(height: 12),
-            Text('등록된 장치가 없습니다', style: TextStyle(color: textCharcoal, fontSize: 14, fontWeight: FontWeight.bold)),
+            const Text('등록된 장치가 없습니다', style: TextStyle(color: textCharcoal, fontSize: 14, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('장치 관리에서 AI 단말을 등록해주세요', style: TextStyle(color: textLightGrey, fontSize: 11)),
+            const Text('장치 관리에서 AI 단말을 등록해주세요', style: TextStyle(color: textLightGrey, fontSize: 11)),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () => _onBottomNavTapped(2),
-              icon: Icon(Icons.add_circle_outline, color: brandingBlue, size: 16),
-              label: Text('장치 등록하러 가기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 12)),
+              icon: const Icon(Icons.add_circle_outline, color: brandingBlue, size: 16),
+              label: const Text('장치 등록하러 가기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 12)),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: brandingBlue),
+                side: const BorderSide(color: brandingBlue),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
@@ -495,7 +495,7 @@ class _DashboardViewState extends State<DashboardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('퀵 액션', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
+        const Text('퀵 액션', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -585,9 +585,9 @@ class _DashboardViewState extends State<DashboardView> {
             return Container(
               height: MediaQuery.of(context).size.height * 0.6,
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: cardWhite,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +597,7 @@ class _DashboardViewState extends State<DashboardView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('보고서 대상 선택', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Text('보고서 대상 선택', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold)),
                       TextButton(
                         onPressed: () {
                           setModalState(() {
@@ -607,7 +607,7 @@ class _DashboardViewState extends State<DashboardView> {
                             }
                           });
                         },
-                        child: Text(allSelected ? '전체 해제' : '전체 선택', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 12)),
+                        child: Text(allSelected ? '전체 해제' : '전체 선택', style: const TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
                     ],
                   ),
@@ -623,7 +623,7 @@ class _DashboardViewState extends State<DashboardView> {
                           contentPadding: EdgeInsets.zero,
                           value: isSelected,
                           activeColor: brandingBlue,
-                          title: Text(device.deviceName, style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                          title: Text(device.deviceName, style: const TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
                           subtitle: Text(device.isOnline ? 'Online' : 'Offline', style: TextStyle(color: device.isOnline ? Colors.green : textLightGrey, fontSize: 11)),
                           onChanged: (val) => setModalState(() => selectedMap[device.id] = val ?? false),
                         );

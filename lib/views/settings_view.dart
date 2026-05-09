@@ -21,17 +21,12 @@ class _SettingsViewState extends State<SettingsView> {
   static const Color _borderLight = Color(0xFFE5E7EB);
   static const Color _blue        = Color(0xFF2563EB);
 
-  // 기기 IP: viewModel에서 불러온 값을 표시용으로만 사용
-  String _displayIp = '불러오는 중...';
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = Provider.of<SettingsViewModel>(context, listen: false);
-      setState(() {
-        _displayIp = vm.droneIp.isNotEmpty ? vm.droneIp : '192.168.1.100';
-      });
+      vm.detectClientIp(); // 화면 진입 시 실제 기기 IP 자동 감지 실행
     });
   }
 
@@ -67,7 +62,7 @@ class _SettingsViewState extends State<SettingsView> {
                     const SizedBox(height: 32),
                     _sectionLabel('제품 사용과 관리'),
                     const SizedBox(height: 10),
-                    _buildDeviceSection(),
+                    _buildDeviceSection(settingsVm),
                     const SizedBox(height: 32),
                     _sectionLabel('알림 설정'),
                     const SizedBox(height: 10),
@@ -172,7 +167,7 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   // ─── 단말기 접속 주소 (IP 자동 표시, 포트 없음) ──────────────
-  Widget _buildDeviceSection() {
+  Widget _buildDeviceSection(SettingsViewModel vm) {
     return _card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -216,7 +211,7 @@ class _SettingsViewState extends State<SettingsView> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _displayIp,
+                      vm.clientIp,
                       style: const TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
                     ),
                   ),
