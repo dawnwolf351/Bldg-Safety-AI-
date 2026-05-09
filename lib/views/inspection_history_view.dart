@@ -17,8 +17,14 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     {'label': '양호', 'color': const Color(0xFF34C759)},
   ];
 
-  final Color _navyCard = const Color(0xFF1E293B);
-  final Color _cyanAccent = const Color(0xFF06B6D4);
+  // 화이트 테마 디자인 토큰 (대시보드와 통일)
+  static const Color bgOffWhite = Color(0xFFF8F9FA);
+  static const Color cardWhite = Color(0xFFFFFFFF);
+  static const Color textCharcoal = Color(0xFF1A1D21);
+  static const Color textLightGrey = Color(0xFF6B7280);
+  static const Color borderLight = Color(0xFFE5E7EB);
+  static const Color brandingBlue = Color(0xFF2563EB);
+
   final Color _redEmergency = const Color(0xFFFF3B30);
   final Color _orangeWarning = const Color(0xFFFF9F0A);
   final Color _greenSafe = const Color(0xFF34C759);
@@ -37,67 +43,56 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
       return false;
     }).toList();
 
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildHeader(),
-          _buildFilterBar(),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              itemCount: filteredList.length,
-              itemBuilder: (context, index) {
-                return _buildHistoryCard(filteredList[index]);
-              },
+    return Container(
+      color: bgOffWhite,
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 4),
+            _buildFilterBar(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filteredList.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      itemCount: filteredList.length,
+                      itemBuilder: (context, index) {
+                        return _buildHistoryCard(filteredList[index]);
+                      },
+                    ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // 상단 헤더
+  // 상단 헤더 (화이트 테마)
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _cyanAccent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _cyanAccent.withValues(alpha: 0.3)),
-                ),
-                child: Icon(Icons.assignment_outlined, color: _cyanAccent, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('진단 내역', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                  Text('INSPECTION HISTORY', style: TextStyle(color: _cyanAccent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
-                ],
+              Icon(Icons.assignment_outlined, color: brandingBlue, size: 28),
+              SizedBox(width: 8),
+              Text(
+                '진단 내역',
+                style: TextStyle(color: textCharcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
               ),
             ],
           ),
-          IconButton(
-            icon: Icon(Icons.search, color: Colors.blueGrey[300]),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('검색 기능은 추후 연동됩니다.')));
-            },
-          )
         ],
       ),
     );
   }
 
-  // 가로 스크롤 필터 바
+  // 가로 스크롤 필터 바 (화이트 테마)
   Widget _buildFilterBar() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -110,27 +105,28 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ChoiceChip(
               showCheckmark: filter['label'] == '전체',
+              checkmarkColor: brandingBlue,
               label: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (filter['label'] != '전체') ...[
-                    Icon(Icons.circle, size: 10, color: filter['color']),
+                    Icon(Icons.circle, size: 8, color: filter['color']),
                     const SizedBox(width: 6),
                   ],
                   Text(filter['label'], style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.blueGrey[300],
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? brandingBlue : textLightGrey,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     fontSize: 13,
                   )),
                 ],
               ),
               selected: isSelected,
-              selectedColor: _cyanAccent.withValues(alpha: 0.2),
-              backgroundColor: _navyCard,
+              selectedColor: brandingBlue.withValues(alpha: 0.1),
+              backgroundColor: cardWhite,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected ? _cyanAccent : Colors.blueGrey.withValues(alpha: 0.3),
+                  color: isSelected ? brandingBlue : borderLight,
                 ),
               ),
               onSelected: (bool selected) {
@@ -147,7 +143,40 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     );
   }
 
-  // 개별 리스트 아이템 카드
+  // 데이터 없을 때 빈 화면 상태
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: brandingBlue.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.assignment_outlined, color: brandingBlue.withValues(alpha: 0.4), size: 48),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '진단 내역이 없습니다',
+              style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'AI 진단이 완료되면 여기에 결과가\n자동으로 표시됩니다.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: textLightGrey, fontSize: 13, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 개별 리스트 아이템 카드 (화이트 테마)
   Widget _buildHistoryCard(Map<String, dynamic> data) {
     bool isCritical = data['status'] == 'CRITICAL';
     bool isWarning = data['status'] == 'WARNING';
@@ -156,18 +185,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     String statusText = isCritical ? '위험 감지' : (isWarning ? '주의 필요' : '안전(정상)');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: _navyCard,
+        color: cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isCritical ? _redEmergency.withValues(alpha: 0.4) : Colors.blueGrey.withValues(alpha: 0.2),
+          color: isCritical ? _redEmergency.withValues(alpha: 0.3) : borderLight,
           width: isCritical ? 1.5 : 1.0,
         ),
-        boxShadow: isCritical ? [
-          BoxShadow(color: _redEmergency.withValues(alpha: 0.15), spreadRadius: 0, blurRadius: 10)
-        ] : [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.2), offset: const Offset(0, 4), blurRadius: 10),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), offset: const Offset(0, 2), blurRadius: 8),
         ],
       ),
       child: ClipRRect(
@@ -194,7 +221,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
               children: [
                 // 왼쪽 썸네일 이미지 영역
                 SizedBox(
-                  width: 110,
+                  width: 100,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -204,16 +231,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           data['imageUrl'],
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.blueGrey[800],
-                            child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                            color: bgOffWhite,
+                            child: const Icon(Icons.image_not_supported, color: textLightGrey),
                           ),
                         ),
                       ),
                       // 이미지와 글씨 겹치는 부분 그라데이션 자연스럽게 블렌딩
                       Container(
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Colors.transparent, _navyCard],
+                            colors: [Colors.transparent, cardWhite],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
@@ -236,7 +263,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 // 오른쪽 텍스트 정보 영역
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                    padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -247,29 +274,29 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           children: [
                             Expanded(
                               child: Text(data['title'],
-                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: textCharcoal, fontSize: 14, fontWeight: FontWeight.bold),
                                 maxLines: 1, overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 8),
                             // 위험 등급 배지
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                               decoration: BoxDecoration(
-                                color: statusColor.withValues(alpha: 0.15),
+                                color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                               ),
                               child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(data['subtitle'],
-                          style: TextStyle(color: isCritical ? Colors.red[200] : Colors.blueGrey[300], fontSize: 11),
+                          style: const TextStyle(color: textLightGrey, fontSize: 11),
                           maxLines: 1, overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -277,18 +304,18 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             Expanded(
                               child: Row(
                                 children: [
-                                  Icon(Icons.access_time, color: Colors.blueGrey[400], size: 12),
+                                  const Icon(Icons.access_time, color: textLightGrey, size: 12),
                                   const SizedBox(width: 4),
-                                  Flexible(child: Text(data['date'], style: TextStyle(color: Colors.blueGrey[400], fontSize: 10), overflow: TextOverflow.ellipsis)),
+                                  Flexible(child: Text(data['date'], style: const TextStyle(color: textLightGrey, fontSize: 10), overflow: TextOverflow.ellipsis)),
                                 ],
                               ),
                             ),
                             // AI 신뢰도 표시
                             Row(
                               children: [
-                                Icon(Icons.psychology, color: _cyanAccent, size: 12),
+                                const Icon(Icons.psychology, color: brandingBlue, size: 12),
                                 const SizedBox(width: 4),
-                                Text('AI 신뢰도 ${data['confidence']}', style: TextStyle(color: _cyanAccent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                Text('AI 신뢰도 ${data['confidence']}', style: const TextStyle(color: brandingBlue, fontSize: 10, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ],

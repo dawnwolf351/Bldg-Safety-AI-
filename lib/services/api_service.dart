@@ -178,100 +178,44 @@ class ApiService {
   // }
   Future<User?> login(String email, String password,
       {String? roleOverride}) async {
+    // --- [프론트 단독 개발용: 서버 연동 비활성화 및 항상 성공 처리] ---
+    await Future.delayed(const Duration(milliseconds: 500)); // 실제 통신 느낌을 위한 지연
+    
+    String parsedRole = roleOverride ?? 'viewer';
+    debugPrint('🧪 [FRONTEND ONLY] 서버 연동 없이 로그인 처리 ($parsedRole)');
+    
+    _tokenCache = 'dummy_token_$parsedRole';
+    _refreshTokenCache = 'dummy_refresh_token_$parsedRole';
+    
+    return User(
+      id: 'dummy_user_${DateTime.now().millisecondsSinceEpoch}',
+      name: parsedRole == 'admin' ? '더미 현장관리자' : (parsedRole == 'super_admin' ? '더미 최고관리자' : '더미 일반사용자'),
+      email: email,
+      role: parsedRole,
+    );
+    // ---------------------------------------------------------
+
+    /* 기존 서버 연동 코드는 아래에 주석 처리되어 보존됩니다.
     try {
       final response = await _dio.post('/api/auth/login', data: {
         'email': email,
         'password': password,
       });
-
-      if (response.statusCode == 200) {
-        // access_token 저장
-        final String? token = response.data['access_token'];
-        if (token != null) {
-          _tokenCache = token;
-          try {
-            await _storage.write(key: 'jwt_token', value: token);
-          } catch (e) {
-            debugPrint('🚨 맥북 테스트 환경: 토큰 저장소(Storage) 쓰기 실패 - 메모리 캐시 사용');
-          }
-        }
-
-        // refresh_token도 별도 저장 (Flask JWT Extended 표준)
-        final String? refreshToken = response.data['refresh_token'];
-        if (refreshToken != null) {
-          _refreshTokenCache = refreshToken; // 메모리 캐시 강제 업데이트
-          try {
-            await _storage.write(key: 'jwt_refresh_token', value: refreshToken);
-          } catch (_) {}
-          debugPrint('✅ [로그인] Access + Refresh Token 모두 메모리/저장소 업데이트 완료');
-        } else {
-          debugPrint('⚠️ [로그인] 응답에 refresh_token이 없습니다.');
-        }
-
-        final userData = response.data['user'] ?? {};
-
-        // ★ 백엔드 Swagger 기준: level 필드로 권한 판별 (1=최고관리자, 2=관리자, 3=일반)
-        // 최상위 응답의 level 또는 user 객체 내 level 둘 다 지원
-        String parsedRole = 'viewer';
-        final dynamic level = response.data['level'] ?? userData['level'];
-        final dynamic roleName = response.data['role'] ?? userData['role_name'];
-
-        if (level != null) {
-          int lvl = level is int ? level : int.tryParse(level.toString()) ?? 3;
-          if (lvl == 1) {
-            parsedRole = 'super_admin';
-          } else if (lvl == 2) {
-            parsedRole = 'admin';
-          } else {
-            parsedRole = 'viewer';
-          }
-        } else if (roleName != null) {
-          String rawRole = roleName.toString().trim().toUpperCase();
-          if (rawRole == 'ROLE_SUPER_ADMIN' || rawRole == 'ROLE_SUPERADMIN') {
-            parsedRole = 'super_admin';
-          } else if (rawRole == 'ROLE_ADMIN') {
-            parsedRole = 'admin';
-          } else {
-            parsedRole = 'viewer';
-          }
-        }
-
-        return User(
-          id: userData['id']?.toString() ?? response.data['id']?.toString() ?? 'new_user',
-          name: parsedRole == 'super_admin' 
-              ? '최고관리자' 
-              : (userData['name'] ?? response.data['name'] ?? 'Api User'),
-          email: email,
-          role: parsedRole,
-        );
-      }
-      return null;
+      ...
     } catch (e) {
       debugPrint('🚨 HTTP Login DB Error: $e');
       return null;
     }
+    */
   }
 
-  // 2. HTTP 실제 로컬 DB 회원가입 로직
+  // 2. HTTP 실제 로컬 DB 회원가입 로직 (프론트 단독 모드)
   Future<User?> signUp(Map<String, dynamic> requestData) async {
-    try {
-      int roleId = (requestData['role'] == 'admin') ? 2 : 3;
-
-      final response = await _dio.post('/api/auth/register', data: {
-        'email': requestData['email'],
-        'password': requestData['password'],
-        'name': requestData['name'],
-        'role_id': roleId,
-      });
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return await login(requestData['email'], requestData['password'],
-            roleOverride: requestData['role']);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('🚨 HTTP SignUp Error: $e');
-      throw Exception(e); // 뷰모델에서 중복 판별을 위해 에러를 던짐
-    }
+    // --- [프론트 단독 개발용: 서버 연동 비활성화 및 항상 성공 처리] ---
+    await Future.delayed(const Duration(milliseconds: 500));
+    String role = requestData['role'] ?? 'viewer';
+    return login(requestData['email'], requestData['password'], roleOverride: role);
+    // ---------------------------------------------------------
   }
 
   // 3. 로그아웃 (토큰 영구 파기)
@@ -300,6 +244,13 @@ class ApiService {
   //   Body: { "refresh_token": "...", "extend": true }
   //   Response: { "access_token": "...", "refresh_token": "..." (extend 시) }
   Future<bool> refreshToken() async {
+    // --- [로컬 개발 및 테스트용 더미 토큰 연장 로직] ---
+    if (_tokenCache?.startsWith('dummy_') == true) {
+      debugPrint('🧪 [DUMMY REFRESH] 더미 토큰 세션을 연장합니다.');
+      return true;
+    }
+    // --------------------------------------------
+
     try {
       String? refreshTk = _refreshTokenCache;
       refreshTk ??= await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
@@ -414,6 +365,32 @@ class ApiService {
   // 9. 전체 장치 목록 조회 (GET /api/devices/)
   // 백엔드 응답: List<DeviceResponse> (배열 형태)
   Future<List<Device>> getJetsonDevices() async {
+    // --- [로컬 개발 및 테스트용 더미 장치 목록] ---
+    if (_tokenCache?.startsWith('dummy_') == true) {
+      debugPrint('🧪 [DUMMY DATA] 더미 장치 목록을 반환합니다.');
+      return [
+        Device(
+            id: 1,
+            deviceName: '더미 제트슨 1',
+            location: '서울 본사',
+            macAddress: 'AA:BB:CC:DD:EE:01',
+            isOnline: true,
+            lastKnownIp: '192.168.0.10',
+            lastConnectedAt: '2024-05-09',
+            createdAt: '2024-01-01'),
+        Device(
+            id: 2,
+            deviceName: '더미 제트슨 2',
+            location: '부산 지사',
+            macAddress: 'AA:BB:CC:DD:EE:02',
+            isOnline: false,
+            lastKnownIp: '192.168.0.11',
+            lastConnectedAt: '2024-05-08',
+            createdAt: '2024-01-02'),
+      ];
+    }
+    // ------------------------------------------
+
     debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
     try {
       // 명시적으로 토큰을 한 번 더 읽어옵니다.

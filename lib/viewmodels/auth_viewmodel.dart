@@ -204,21 +204,23 @@ class AuthViewModel extends ChangeNotifier {
         barrierDismissible: false, // 팝업 바깥 빈 곳을 눌러도 안 꺼지도록 강제
         builder: (dialogContext) {
           return AlertDialog(
-            backgroundColor: const Color(0xFF1E293B),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent, // 화이트 테마에서 배경색 깔끔하게 유지
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFE5E7EB), width: 1), // 테두리 추가
+            ),
             title: const Row(
               children: [
                 Icon(Icons.timer_outlined, color: Color(0xFFFF9F0A)),
                 SizedBox(width: 8),
                 Text('세션 만료 경고',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
+                    style: TextStyle(color: Color(0xFF1A1D21), fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
             content: const Text(
               '보안을 위해 1분 뒤 자동으로 로그아웃됩니다.\n계속해서 앱을 사용하시겠습니까?',
-              style:
-                  TextStyle(color: Colors.white70, height: 1.5, fontSize: 13),
+              style: TextStyle(color: Color(0xFF6B7280), height: 1.5, fontSize: 13),
             ),
             actions: [
               TextButton(
@@ -227,8 +229,8 @@ class AuthViewModel extends ChangeNotifier {
                   Navigator.of(dialogContext).pop();
                   _forceLogoutWithMessage('사용자의 요청으로 즉시 로그아웃 처리되었습니다.');
                 },
-                child: Text('아니오(로그아웃)',
-                    style: TextStyle(color: Colors.blueGrey[300])),
+                child: const Text('아니오(로그아웃)',
+                    style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -252,7 +254,7 @@ class AuthViewModel extends ChangeNotifier {
                                 style: TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
-                        backgroundColor: Color(0xFF06B6D4),
+                        backgroundColor: Color(0xFF2563EB), // 브랜딩 블루로 변경
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -262,12 +264,13 @@ class AuthViewModel extends ChangeNotifier {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF06B6D4),
+                  backgroundColor: const Color(0xFF2563EB), // 브랜딩 블루
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
                 ),
                 child: const Text('예(시간 연장)',
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           );

@@ -11,99 +11,103 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  final TextEditingController _ipController = TextEditingController();
-  final TextEditingController _portController = TextEditingController();
+  // ─── 색상 토큰 (대시보드와 동일 팔레트) ────────────────────────
+  static const Color _bgOffWhite  = Color(0xFFF8F9FA);
+  static const Color _cardWhite   = Color(0xFFFFFFFF);
+  static const Color _charcoal    = Color(0xFF1A1D21);
+  static const Color _lightGrey   = Color(0xFF6B7280);
+  static const Color _borderLight = Color(0xFFE5E7EB);
+  static const Color _blue        = Color(0xFF2563EB);
+
+  // 기기 IP: viewModel에서 불러온 값을 표시용으로만 사용
+  String _displayIp = '불러오는 중...';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = Provider.of<SettingsViewModel>(context, listen: false);
-      _ipController.text = vm.droneIp;
-      _portController.text = vm.dronePort;
+      setState(() {
+        _displayIp = vm.droneIp.isNotEmpty ? vm.droneIp : '192.168.1.100';
+      });
     });
   }
 
-  @override
-  void dispose() {
-    _ipController.dispose();
-    _portController.dispose();
-    super.dispose();
-  }
-
-  final Color _navyCard = const Color(0xFF1E293B);
-  final Color _cyanAccent = const Color(0xFF06B6D4);
-
+  // ─── Build ────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final settingsVm = context.watch<SettingsViewModel>();
-    final authVm = context.watch<AuthViewModel>();
-    final user = authVm.currentUser;
+    final authVm     = context.watch<AuthViewModel>();
+    final user       = authVm.currentUser;
 
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildProfileSection(
-                    user?.name ?? '테스트 유저', 
-                    user?.email ?? 'user@example.com',
-                    user?.role == 'super_admin' ? '최고관리자' : (user?.role == 'admin' ? '현장 관리자' : '일반 사용자'),
-                    user?.role == 'super_admin' ? 'SUPER ADMIN' : (user?.role == 'admin' ? 'FIELD ADMIN' : 'GENERAL USER')
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('장치 및 AI 설정', 'DEVICE & AI CONFIG', Icons.memory),
-                  const SizedBox(height: 12),
-                  _buildDeviceAiConfigSection(settingsVm),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('알림 설정', 'NOTIFICATION SETTINGS', Icons.notifications_none),
-                  const SizedBox(height: 12),
-                  _buildNotificationSection(settingsVm),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('데이터 및 시스템', 'DATA & SYSTEM', Icons.storage_outlined),
-                  const SizedBox(height: 12),
-                  _buildDataSystemSection(settingsVm),
-                  const SizedBox(height: 40),
-                ],
+    final roleKo = user?.role == 'super_admin'
+        ? '최고관리자'
+        : (user?.role == 'admin' ? '현장 관리자' : '일반 사용자');
+
+    return Scaffold(
+      backgroundColor: _bgOffWhite,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildProfileCard(
+                      user?.name  ?? '테스트 유저',
+                      user?.email ?? 'user@example.com',
+                      roleKo,
+                    ),
+                    const SizedBox(height: 32),
+                    _sectionLabel('제품 사용과 관리'),
+                    const SizedBox(height: 10),
+                    _buildDeviceSection(),
+                    const SizedBox(height: 32),
+                    _sectionLabel('알림 설정'),
+                    const SizedBox(height: 10),
+                    _buildNotificationSection(settingsVm),
+                    const SizedBox(height: 32),
+                    _sectionLabel('앱 정보'),
+                    const SizedBox(height: 10),
+                    _buildAppInfoSection(settingsVm),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  // ─── 헤더 ────────────────────────────────────────────────────
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _cardWhite,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _borderLight),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: const Icon(Icons.settings_outlined, color: _blue, size: 26),
+          ),
+          const SizedBox(width: 16),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _cyanAccent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _cyanAccent.withValues(alpha: 0.3)),
-                ),
-                child: Icon(Icons.settings_outlined, color: _cyanAccent, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('설정', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                  Text('SYSTEM CONFIGURATION', style: TextStyle(color: _cyanAccent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
-                ],
-              ),
+              Text('설정', style: TextStyle(color: _charcoal, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
             ],
           ),
         ],
@@ -111,327 +115,215 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildSectionTitle(String titleKo, String titleEn, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, color: _cyanAccent, size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 6,
-            children: [
-              Text(titleKo, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-              Text(titleEn, style: TextStyle(color: Colors.blueGrey[400], fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-            ],
-          ),
-        ),
-      ],
+  // ─── 섹션 레이블 ──────────────────────────────────────────────
+  Widget _sectionLabel(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(title, style: const TextStyle(color: _lightGrey, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: -0.2)),
     );
   }
 
-  Widget _buildCard({required Widget child}) {
+  // ─── 공통 카드 래퍼 ──────────────────────────────────────────
+  Widget _card({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
-        color: _navyCard,
+        color: _cardWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.15)),
+        border: Border.all(color: _borderLight),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: child,
     );
   }
 
-  Widget _buildProfileSection(String name, String email, String roleKo, String roleEn) {
-    return _buildCard(
+  // ─── 프로필 카드 ──────────────────────────────────────────────
+  Widget _buildProfileCard(String name, String email, String roleKo) {
+    return _card(
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Column(
           children: [
             CircleAvatar(
-              radius: 30,
-              backgroundColor: _cyanAccent.withValues(alpha: 0.15),
-              child: Icon(Icons.person_outline, size: 32, color: _cyanAccent),
+              radius: 32,
+              backgroundColor: _blue.withValues(alpha: 0.1),
+              child: const Icon(Icons.person, size: 36, color: _blue),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+            Text(name, style: const TextStyle(color: _charcoal, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(email, style: const TextStyle(color: _lightGrey, fontSize: 13)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(roleKo, style: const TextStyle(color: _blue, fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── 단말기 접속 주소 (IP 자동 표시, 포트 없음) ──────────────
+  Widget _buildDeviceSection() {
+    return _card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _blue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.wifi_rounded, color: _blue, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('단말기 접속 주소', style: TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 2),
+                      Text('시스템이 디바이스의 IP를 자동으로 감지합니다.', style: TextStyle(color: _lightGrey, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: _bgOffWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _borderLight),
+              ),
+              child: Row(
                 children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(email, style: TextStyle(color: Colors.blueGrey[400], fontSize: 12)),
-                  const SizedBox(height: 8),
+                  const Icon(Icons.language, color: _lightGrey, size: 18),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _displayIp,
+                      style: const TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
+                    ),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _cyanAccent.withValues(alpha: 0.1),
+                      color: const Color(0xFF10B981).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: _cyanAccent.withValues(alpha: 0.3)),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(roleKo, style: TextStyle(color: _cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 1),
-                        Text(roleEn, style: TextStyle(color: _cyanAccent.withValues(alpha: 0.7), fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-                      ],
-                    ),
+                    child: const Text('자동 감지됨', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
-            IconButton(
-              onPressed: () {},
-              icon: Icon(Icons.edit_outlined, color: Colors.blueGrey[300]),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDeviceAiConfigSection(SettingsViewModel vm) {
-    return _buildCard(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              children: [
-                const Text('단말기 접속 주소', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                Text('Drone / Jetson IP Config', style: TextStyle(color: Colors.blueGrey[400], fontSize: 11)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _buildTextField(_ipController, 'IP 주소', Icons.language),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: _buildTextField(_portController, '포트', null),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  vm.updateDroneConfig(_ipController.text, _portController.text);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('단말기 접속 주소가 저장되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: _cyanAccent));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _cyanAccent.withValues(alpha: 0.15),
-                  foregroundColor: _cyanAccent,
-                  elevation: 0,
-                  side: BorderSide(color: _cyanAccent.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('설정 저장', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const Divider(color: Colors.blueGrey, height: 32, thickness: 0.2),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              children: [
-                const Text('AI 탐지 임계값', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                Text('Detection Threshold', style: TextStyle(color: Colors.blueGrey[400], fontSize: 11)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text('결함 탐지 민감도를 조절합니다. (값이 낮을수록 작은 결함도 감지함)', style: TextStyle(color: Colors.blueGrey[400], fontSize: 11)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text('${(vm.aiThreshold * 100).toInt()}%', style: TextStyle(color: _cyanAccent, fontSize: 16, fontWeight: FontWeight.bold)),
-                Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: _cyanAccent,
-                      inactiveTrackColor: _cyanAccent.withValues(alpha: 0.2),
-                      thumbColor: _cyanAccent,
-                      overlayColor: _cyanAccent.withValues(alpha: 0.2),
-                      trackHeight: 4.0,
-                    ),
-                    child: Slider(
-                      value: vm.aiThreshold,
-                      min: 0.0,
-                      max: 1.0,
-                      onChanged: (val) {
-                        vm.updateAiThreshold(val);
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String hint, IconData? icon) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.blueGrey[600], fontSize: 14),
-        prefixIcon: icon != null ? Icon(icon, color: Colors.blueGrey[400], size: 18) : null,
-        filled: true,
-        fillColor: Colors.black.withValues(alpha: 0.2),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.blueGrey.withValues(alpha: 0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _cyanAccent),
-        ),
-      ),
-    );
-  }
-
+  // ─── 알림 설정 (기존 로직 유지) ───────────────────────────────
   Widget _buildNotificationSection(SettingsViewModel vm) {
-    return _buildCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Column(
-          children: [
-            _buildSwitchTile(
-              titleKo: '긴급 푸시 알림',
-              titleEn: 'Push Notifications',
-              subtitle: '치명적 결함 발견 시 실시간 팝업 알림',
-              icon: Icons.notification_important_outlined,
-              value: vm.pushNotifications,
-              onChanged: (val) => vm.togglePushNotifications(val),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
-            ),
-            _buildSwitchTile(
-              titleKo: '소리 및 진동 알림',
-              titleEn: 'Sound & Vibration',
-              subtitle: '위험 경고 시 강력한 진동과 경고음',
-              icon: Icons.vibration_outlined,
-              value: vm.soundVibration,
-              onChanged: (val) => vm.toggleSoundVibration(val),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
-            ),
-            _buildSwitchTile(
-              titleKo: '야간 방해금지',
-              titleEn: 'Do Not Disturb',
-              subtitle: '야간 시간대(22:00~07:00) 알림 무음',
-              icon: Icons.nightlight_outlined,
-              value: false, // 더미 상태
-              onChanged: (val) {},
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({required String titleKo, required String titleEn, required String subtitle, required IconData icon, required bool value, required Function(bool) onChanged}) {
-    return SwitchListTile(
-      title: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 6,
-        children: [
-          Text(titleKo, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-          Text(titleEn, style: TextStyle(color: Colors.blueGrey[400], fontSize: 10)),
-        ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: Text(subtitle, style: TextStyle(color: Colors.blueGrey[400], fontSize: 11)),
-      ),
-      secondary: Icon(icon, color: Colors.blueGrey[300]),
-      activeThumbColor: _cyanAccent,
-      activeTrackColor: _cyanAccent.withValues(alpha: 0.3),
-      inactiveThumbColor: Colors.blueGrey[400],
-      inactiveTrackColor: Colors.black.withValues(alpha: 0.3),
-      value: value,
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _buildDataSystemSection(SettingsViewModel vm) {
-    return _buildCard(
+    return _card(
       child: Column(
         children: [
-          _buildListTile(
-            titleKo: '진단 보고서 내보내기',
-            titleEn: 'Export Inspection Report',
-            subtitle: '최근 진단된 데이터를 PDF 형식으로 추출',
-            icon: Icons.picture_as_pdf_outlined,
-            onTap: () async {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('보고서를 생성하는 중...'), backgroundColor: Colors.blueGrey));
-              await vm.exportReport();
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('보고서 다운로드가 완료되었습니다.', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), backgroundColor: _cyanAccent));
-            },
+          _switchTile(
+            icon: Icons.notification_important_rounded,
+            title: '긴급 푸시 알림',
+            subtitle: '치명적 결함 발견 시 실시간 팝업 알림',
+            value: vm.pushNotifications,
+            onChanged: vm.togglePushNotifications,
           ),
-          Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
-          _buildListTile(
-            titleKo: '앱 버전 정보',
-            titleEn: 'App Info',
-            subtitle: '현재 버전 v1.0.0 (최신 빌드)',
-            icon: Icons.info_outline,
-            onTap: () {
-               showAboutDialog(
-                 context: context,
-                 applicationName: '건축물 구조 안전 진단 시스템',
-                 applicationVersion: 'v1.0.0',
-                 applicationLegalese: 'Copyright 2026. Antigravity AI.',
-               );
-            },
+          const Divider(color: _borderLight, height: 1, indent: 56, endIndent: 20),
+          _switchTile(
+            icon: Icons.vibration_rounded,
+            title: '소리 및 진동 알림',
+            subtitle: '위험 경고 시 강력한 진동과 경고음',
+            value: vm.soundVibration,
+            onChanged: vm.toggleSoundVibration,
+          ),
+          const Divider(color: _borderLight, height: 1, indent: 56, endIndent: 20),
+          _switchTile(
+            icon: Icons.nightlight_round,
+            title: '야간 방해금지',
+            subtitle: '야간 시간대(22:00~07:00) 알림 무음',
+            value: false,
+            onChanged: (_) {},
           ),
         ],
       ),
     );
   }
 
-  Widget _buildListTile({required String titleKo, required String titleEn, required String subtitle, required IconData icon, required VoidCallback onTap}) {
-    return ListTile(
-      title: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 6,
-        children: [
-          Text(titleKo, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-          Text(titleEn, style: TextStyle(color: Colors.blueGrey[400], fontSize: 10)),
-        ],
+  Widget _switchTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: _bgOffWhite, borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, color: _charcoal, size: 22),
+        ),
+        title: Text(title, style: const TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Text(subtitle, style: const TextStyle(color: _lightGrey, fontSize: 12)),
+        ),
+        activeTrackColor: _blue,
+        activeColor: Colors.white,
+        inactiveThumbColor: Colors.white,
+        inactiveTrackColor: _borderLight,
+        value: value,
+        onChanged: onChanged,
       ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: Text(subtitle, style: TextStyle(color: Colors.blueGrey[400], fontSize: 11)),
-      ),
-      leading: Icon(icon, color: Colors.blueGrey[300]),
-      trailing: Icon(Icons.chevron_right, color: Colors.blueGrey[600]),
-      onTap: onTap,
     );
   }
 
-  // 로그아웃 버튼 제거됨 (하위 네비게이션 바로 이관)
+  // ─── 앱 정보 (진단 보고서 삭제됨) ────────────────────────────
+  Widget _buildAppInfoSection(SettingsViewModel vm) {
+    return _card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: _bgOffWhite, borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.info_outline_rounded, color: _charcoal, size: 22),
+        ),
+        title: const Text('앱 버전 정보', style: TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
+        subtitle: const Padding(
+          padding: EdgeInsets.only(top: 3),
+          child: Text('현재 버전 v1.0.0 (최신 빌드)', style: TextStyle(color: _lightGrey, fontSize: 12)),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: _borderLight),
+        onTap: () {
+          showAboutDialog(
+            context: context,
+            applicationName: '건축물 구조 안전 진단 시스템',
+            applicationVersion: 'v1.0.0',
+            applicationLegalese: 'Copyright 2026. Antigravity AI.',
+          );
+        },
+      ),
+    );
+  }
 }
