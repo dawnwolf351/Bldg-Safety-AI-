@@ -290,7 +290,7 @@ class _SettingsViewState extends State<SettingsView> {
           child: Text(subtitle, style: const TextStyle(color: _lightGrey, fontSize: 12)),
         ),
         activeTrackColor: _blue,
-        activeColor: Colors.white,
+        activeThumbColor: Colors.white,
         inactiveThumbColor: Colors.white,
         inactiveTrackColor: _borderLight,
         value: value,

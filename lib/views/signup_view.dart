@@ -193,7 +193,7 @@ class _SignupViewState extends State<SignupView> {
                           _fieldLabel('이메일'),
                           _inputField(
                             controller: _emailController,
-                            hint: 'admin@vic-soc.com',
+                            hint: 'example@email.com',
                             icon: Icons.mail_outline_rounded,
                             keyboardType: TextInputType.emailAddress,
                           ),

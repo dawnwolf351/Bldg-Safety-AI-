@@ -445,7 +445,7 @@ class StructureManagementView extends StatelessWidget {
                       children: [
                         const Text('안전 점수', style: TextStyle(color: _lightGrey, fontSize: 12, fontWeight: FontWeight.bold)),
                         Text('$score / 100', 
-                            style: TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
+                            style: const TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
                       ],
                     ),
                   ],

@@ -160,7 +160,7 @@ class _DashboardViewState extends State<DashboardView> {
               Icon(Icons.security, color: brandingBlue, size: 28),
               const SizedBox(width: 8),
               Text(
-                'VIC SOC 진단',
+                'VIC SOC 진단 시스템',
                 style: TextStyle(color: textCharcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
               ),
             ],
