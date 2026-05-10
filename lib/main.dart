@@ -8,6 +8,7 @@ import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/dashboard_viewmodel.dart';
 import 'viewmodels/device_viewmodel.dart';
 import 'viewmodels/settings_viewmodel.dart';
+import 'viewmodels/building_viewmodel.dart';
 import 'views/login_view.dart';
 import 'views/dashboard_view.dart';
 import 'utils/globals.dart';
@@ -26,6 +27,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => DashboardViewModel()),
         ChangeNotifierProvider(create: (_) => DeviceViewModel()),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
+        ChangeNotifierProvider(create: (_) => BuildingViewModel()),
       ],
       child: const CapstoneApp(),
     ),

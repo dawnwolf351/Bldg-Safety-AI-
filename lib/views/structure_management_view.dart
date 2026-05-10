@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/building_viewmodel.dart';
+import '../models/building.dart';
 import '../theme/app_colors.dart';
 
-class StructureManagementView extends StatelessWidget {
+class StructureManagementView extends StatefulWidget {
   const StructureManagementView({super.key});
 
-  // ─── 색상 토큰: AppColors 참조 ──────────────────────────
+  @override
+  State<StructureManagementView> createState() => _StructureManagementViewState();
+}
+
+class _StructureManagementViewState extends State<StructureManagementView> {
   static const Color _bgOffWhite   = AppColors.bgOffWhite;
   static const Color _cardWhite    = AppColors.cardWhite;
   static const Color _charcoal     = AppColors.charcoal;
@@ -15,149 +22,127 @@ class StructureManagementView extends StatelessWidget {
   static const Color _red          = AppColors.statusRed;
   static const Color _orange       = AppColors.statusOrange;
 
-  // 더미 구조물 데이터 (로직 보존)
-  static final List<Map<String, dynamic>> _dummyStructures = [
-    {
-      'name': '정보공학관',
-      'type': '대학 건물',
-      'floors': 5,
-      'year': 2008,
-      'status': 'good',
-      'score': 92,
-      'lastInspection': '2026-04-15',
-      'issues': 1,
-      'icon': Icons.school_rounded,
-    },
-    {
-      'name': '중앙도서관',
-      'type': '도서관',
-      'floors': 6,
-      'year': 2002,
-      'status': 'warning',
-      'score': 74,
-      'lastInspection': '2026-03-28',
-      'issues': 3,
-      'icon': Icons.local_library_rounded,
-    },
-    {
-      'name': '학생회관',
-      'type': '복합 시설',
-      'floors': 4,
-      'year': 1995,
-      'status': 'danger',
-      'score': 58,
-      'lastInspection': '2026-04-02',
-      'issues': 7,
-      'icon': Icons.groups_rounded,
-    },
-    {
-      'name': '공학관 A동',
-      'type': '연구동',
-      'floors': 8,
-      'year': 2015,
-      'status': 'good',
-      'score': 96,
-      'lastInspection': '2026-04-20',
-      'issues': 0,
-      'icon': Icons.precision_manufacturing_rounded,
-    },
-    {
-      'name': '제1기숙사',
-      'type': '주거 시설',
-      'floors': 10,
-      'year': 2010,
-      'status': 'warning',
-      'score': 81,
-      'lastInspection': '2026-04-10',
-      'issues': 2,
-      'icon': Icons.apartment_rounded,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BuildingViewModel>().fetchBuildings();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _bgOffWhite,
-      appBar: AppBar(
-        backgroundColor: _cardWhite,
-        elevation: 0,
-        centerTitle: false,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: _charcoal, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('구조물 관리', 
+    return Consumer<BuildingViewModel>(
+      builder: (context, vm, _) {
+        return Scaffold(
+          backgroundColor: _bgOffWhite,
+          appBar: AppBar(
+            backgroundColor: _cardWhite,
+            elevation: 0,
+            centerTitle: false,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: _charcoal, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text('건물 관리',
                 style: TextStyle(color: _charcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _brandingBlue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _brandingBlue.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.architecture, color: _brandingBlue, size: 14),
-                const SizedBox(width: 4),
-                Text('${_dummyStructures.length}개소', 
-                    style: const TextStyle(color: _brandingBlue, fontSize: 11, fontWeight: FontWeight.w800)),
-              ],
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: _borderLight, height: 1),
-        ),
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        children: [
-          // 1. 상단 요약 섹션
-          _buildSummaryCards(),
-          const SizedBox(height: 32),
-          
-          // 2. 섹션 타이틀
-          Row(
-            children: [
+            actions: [
               Container(
-                width: 4, height: 16,
-                decoration: BoxDecoration(color: _brandingBlue, borderRadius: BorderRadius.circular(2)),
+                margin: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _brandingBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _brandingBlue.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.domain_rounded, color: _brandingBlue, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${vm.buildings.length}개소',
+                        style: const TextStyle(color: _brandingBlue, fontSize: 11, fontWeight: FontWeight.w800)),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-              const Text('등록된 구조물', 
-                  style: TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
             ],
+            bottom: const PreferredSize(
+              preferredSize: Size.fromHeight(1),
+              child: Divider(height: 1, color: _borderLight),
+            ),
           ),
-          const SizedBox(height: 12),
-          
-          // 3. 구조물 카드 리스트
-          ..._dummyStructures.map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: _buildStructureCard(s, context),
-          )),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _showAddBuildingSheet(context, vm),
+            backgroundColor: _brandingBlue,
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('건물 추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+          body: vm.isLoading
+              ? const Center(child: CircularProgressIndicator(color: _brandingBlue))
+              : vm.buildings.isEmpty
+                  ? _buildEmptyState()
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+                      children: [
+                        _buildSummaryCards(vm.buildings),
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Container(
+                              width: 4, height: 16,
+                              decoration: BoxDecoration(color: _brandingBlue, borderRadius: BorderRadius.circular(2)),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('등록된 건물',
+                                style: TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...vm.buildings.map((b) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _buildBuildingCard(b, context, vm),
+                        )),
+                      ],
+                    ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: _brandingBlue.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.domain_add_rounded, color: _brandingBlue, size: 52),
+          ),
+          const SizedBox(height: 24),
+          const Text('등록된 건물이 없습니다', style: TextStyle(color: _charcoal, fontSize: 17, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          const Text('하단의 "건물 추가" 버튼으로\n첫 번째 건물을 등록해 보세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _lightGrey, fontSize: 13, height: 1.6)),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
-    final good = _dummyStructures.where((s) => s['status'] == 'good').length;
-    final warning = _dummyStructures.where((s) => s['status'] == 'warning').length;
-    final danger = _dummyStructures.where((s) => s['status'] == 'danger').length;
-
+  Widget _buildSummaryCards(List<Building> buildings) {
     return Row(
       children: [
-        Expanded(child: _buildMiniStat(Icons.verified_outlined, '양호', '$good', _green)),
+        Expanded(child: _buildMiniStat(Icons.domain_rounded, '전체', '${buildings.length}', _brandingBlue)),
         const SizedBox(width: 10),
-        Expanded(child: _buildMiniStat(Icons.warning_amber_rounded, '주의', '$warning', _orange)),
+        Expanded(child: _buildMiniStat(Icons.event_available_rounded, '완공일 등록', '${buildings.where((b) => b.completionDate != null).length}', _green)),
         const SizedBox(width: 10),
-        Expanded(child: _buildMiniStat(Icons.dangerous_outlined, '위험', '$danger', _red)),
+        Expanded(child: _buildMiniStat(Icons.pending_rounded, '미등록', '${buildings.where((b) => b.completionDate == null).length}', _orange)),
       ],
     );
   }
@@ -169,157 +154,96 @@ class StructureManagementView extends StatelessWidget {
         color: _cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _borderLight),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 10),
-          Text(value, 
-              style: const TextStyle(color: _charcoal, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(value, style: const TextStyle(color: _charcoal, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text(label, 
-              style: const TextStyle(color: _lightGrey, fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: _lightGrey, fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildStructureCard(Map<String, dynamic> structure, BuildContext context) {
-    final status = structure['status'] as String;
-    final score = structure['score'] as int;
-    final issues = structure['issues'] as int;
-
-    Color statusColor;
-    String statusLabel;
-    switch (status) {
-      case 'good': statusColor = _green; statusLabel = '양호'; break;
-      case 'warning': statusColor = _orange; statusLabel = '주의'; break;
-      case 'danger': statusColor = _red; statusLabel = '위험'; break;
-      default: statusColor = _lightGrey; statusLabel = '미정';
-    }
-
+  Widget _buildBuildingCard(Building building, BuildContext context, BuildingViewModel vm) {
     return GestureDetector(
-      onTap: () => _showStructureDetail(context, structure, statusColor, statusLabel),
+      onTap: () => _showBuildingDetail(context, building, vm),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: _cardWhite,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _borderLight),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 5)),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 5))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 헤더 영역
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: _brandingBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(structure['icon'] as IconData, color: statusColor, size: 26),
+                  child: const Icon(Icons.domain_rounded, color: _brandingBlue, size: 26),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(structure['name'], 
+                      Text(building.buildingName,
                           style: const TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
-                      Text('${structure['type']}  •  ${structure['floors']}층  •  ${structure['year']}년 준공', 
-                          style: const TextStyle(color: _lightGrey, fontSize: 11, fontWeight: FontWeight.w500)),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: _lightGrey, size: 12),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(building.location,
+                                style: const TextStyle(color: _lightGrey, fontSize: 11, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: _green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    border: Border.all(color: _green.withValues(alpha: 0.3)),
                   ),
-                  child: Text(statusLabel, 
-                      style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w900)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            
-            // 점수 바 섹션
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('안전 지수', style: TextStyle(color: _charcoal, fontSize: 12, fontWeight: FontWeight.w700)),
-                          Text('$score/100', style: TextStyle(color: statusColor, fontSize: 14, fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: score / 100,
-                          backgroundColor: _bgOffWhite,
-                          valueColor: AlwaysStoppedAnimation(statusColor),
-                          minHeight: 8,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 20),
-                // 이슈 카운트
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _bgOffWhite,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _borderLight),
-                  ),
-                  child: Column(
-                    children: [
-                      Text('$issues', 
-                          style: TextStyle(color: issues > 0 ? _orange : _green, fontSize: 18, fontWeight: FontWeight.w900)),
-                      const Text('이슈', style: TextStyle(color: _lightGrey, fontSize: 9, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  child: const Text('등록됨', style: TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w900)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             const Divider(color: _borderLight, height: 1),
             const SizedBox(height: 12),
-            
-            // 하단 정보
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.event_note_rounded, color: _lightGrey, size: 12),
+                    const Icon(Icons.calendar_today_rounded, color: _lightGrey, size: 12),
                     const SizedBox(width: 4),
-                    Text('최근 점검: ${structure['lastInspection']}', 
-                        style: const TextStyle(color: _lightGrey, fontSize: 10, fontWeight: FontWeight.w500)),
+                    Text(
+                      building.completionDate != null ? '완공일: ${building.completionDate}' : '완공일 미등록',
+                      style: const TextStyle(color: _lightGrey, fontSize: 10, fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
                 const Row(
                   children: [
-                    Text('상세 분석', 
-                        style: TextStyle(color: _brandingBlue, fontSize: 11, fontWeight: FontWeight.w800)),
+                    Text('상세 보기', style: TextStyle(color: _brandingBlue, fontSize: 11, fontWeight: FontWeight.w800)),
                     SizedBox(width: 2),
                     Icon(Icons.chevron_right_rounded, color: _brandingBlue, size: 16),
                   ],
@@ -332,180 +256,309 @@ class StructureManagementView extends StatelessWidget {
     );
   }
 
-  void _showStructureDetail(BuildContext context, Map<String, dynamic> structure, Color statusColor, String statusLabel) {
-    final score = structure['score'] as int;
+  void _showBuildingDetail(BuildContext context, Building building, BuildingViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.65,
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        decoration: const BoxDecoration(
+          color: _cardWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: _borderLight, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _brandingBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.domain_rounded, color: _brandingBlue, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(building.buildingName,
+                          style: const TextStyle(color: _charcoal, fontSize: 20, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 4),
+                      Text(building.location,
+                          style: const TextStyle(color: _lightGrey, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _detailRow(Icons.tag_rounded, 'Building ID', '#${building.id}'),
+            _detailRow(Icons.location_city_rounded, '위치', building.location),
+            _detailRow(Icons.event_rounded, '완공일', building.completionDate ?? '미등록'),
+            _detailRow(Icons.access_time_rounded, '등록일', building.createdAt ?? '-'),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showAddBuildingSheet(context, vm, editBuilding: building);
+                    },
+                    icon: const Icon(Icons.edit_rounded, size: 16),
+                    label: const Text('수정'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _brandingBlue,
+                      side: const BorderSide(color: _brandingBlue),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _confirmDelete(ctx, building, vm),
+                    icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
+                    label: const Text('삭제', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _red,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Icon(icon, color: _brandingBlue, size: 18),
+          const SizedBox(width: 12),
+          Text('$label  ', style: const TextStyle(color: _lightGrey, fontSize: 13)),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(color: _charcoal, fontSize: 13, fontWeight: FontWeight.w700),
+                textAlign: TextAlign.end),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext ctx, Building building, BuildingViewModel vm) {
+    showDialog(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('건물 삭제', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: Text('"${building.buildingName}"를 삭제하시겠습니까?\n결함 이력이 있을 경우 삭제가 불가합니다.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(_), child: const Text('취소')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(_);
+              Navigator.pop(ctx);
+              final ok = await vm.deleteBuilding(building.id);
+              if (!ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('삭제 실패: 결함 이력을 먼저 삭제해주세요.'), backgroundColor: Colors.red),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _red, foregroundColor: Colors.white),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddBuildingSheet(BuildContext context, BuildingViewModel vm, {Building? editBuilding}) {
+    final nameCtrl = TextEditingController(text: editBuilding?.buildingName ?? '');
+    final locationCtrl = TextEditingController(text: editBuilding?.location ?? '');
+    String? selectedDate = editBuilding?.completionDate;
+    final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          decoration: const BoxDecoration(
-            color: _cardWhite,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: _borderLight, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // 헤더
-              Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+            decoration: const BoxDecoration(
+              color: _cardWhite,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(structure['icon'] as IconData, color: statusColor, size: 32),
+                  Center(
+                    child: Container(width: 40, height: 4,
+                      decoration: BoxDecoration(color: _borderLight, borderRadius: BorderRadius.circular(2))),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(structure['name'], 
-                            style: const TextStyle(color: _charcoal, fontSize: 22, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 4),
-                        Text('${structure['type']}  •  ${structure['floors']}층  •  ${structure['year']}년 준공', 
-                            style: const TextStyle(color: _lightGrey, fontSize: 13, fontWeight: FontWeight.w500)),
-                      ],
+                  const SizedBox(height: 20),
+                  Text(
+                    editBuilding == null ? '새 건물 등록' : '건물 정보 수정',
+                    style: const TextStyle(color: _charcoal, fontSize: 18, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('정확한 정보를 입력해주세요.', style: TextStyle(color: _lightGrey, fontSize: 12)),
+                  const SizedBox(height: 24),
+                  _buildFormField(
+                    controller: nameCtrl,
+                    label: '건물 이름',
+                    hint: '예) 정보공학관',
+                    icon: Icons.domain_rounded,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? '건물 이름을 입력해주세요.' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFormField(
+                    controller: locationCtrl,
+                    label: '위치 (주소)',
+                    hint: '예) 서울시 강남구 테헤란로 123',
+                    icon: Icons.location_on_rounded,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? '위치를 입력해주세요.' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime(2100),
+                        builder: (c, child) => Theme(
+                          data: Theme.of(c).copyWith(
+                            colorScheme: const ColorScheme.light(primary: _brandingBlue),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          selectedDate = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: _bgOffWhite,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _borderLight),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_month_rounded, color: _brandingBlue, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              selectedDate ?? '완공일자 선택 (선택사항)',
+                              style: TextStyle(
+                                color: selectedDate != null ? _charcoal : _lightGrey,
+                                fontSize: 14,
+                                fontWeight: selectedDate != null ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded, color: _lightGrey, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        bool ok;
+                        if (editBuilding == null) {
+                          ok = await vm.addBuilding(nameCtrl.text.trim(), locationCtrl.text.trim(), selectedDate);
+                        } else {
+                          ok = await vm.updateBuilding(editBuilding.id, nameCtrl.text.trim(), locationCtrl.text.trim(), selectedDate);
+                        }
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(ok ? (editBuilding == null ? '건물이 등록되었습니다.' : '건물 정보가 수정되었습니다.') : '처리에 실패했습니다. 권한을 확인해주세요.'),
+                            backgroundColor: ok ? _green : _red,
+                          ));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _brandingBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        editBuilding == null ? '등록하기' : '수정 완료',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-              
-              // 종합 점수 카드
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: _bgOffWhite,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _borderLight),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('종합 안전 등급', 
-                            style: TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.w800)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(statusLabel, 
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Stack(
-                      children: [
-                        Container(
-                          height: 12,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: _borderLight),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: score / 100,
-                          child: Container(
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('안전 점수', style: TextStyle(color: _lightGrey, fontSize: 12, fontWeight: FontWeight.bold)),
-                        Text('$score / 100', 
-                            style: const TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              
-              const Text('점검 항목별 상세 데이터', 
-                  style: TextStyle(color: _charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildCheckItem('외벽 균열 및 탈락 상태', score > 80 ? 'pass' : score > 60 ? 'warning' : 'fail'),
-                    _buildCheckItem('주요 구조부(기둥, 보) 건전성', score > 70 ? 'pass' : 'warning'),
-                    _buildCheckItem('철근 부식 및 피복 두께', score > 85 ? 'pass' : score > 65 ? 'warning' : 'fail'),
-                    _buildCheckItem('옥상/지하 방수층 노후도', score > 75 ? 'pass' : 'warning'),
-                    _buildCheckItem('부등 침하 및 지반 안정성', 'pass'),
-                    _buildCheckItem('소방/전기 설비 안전 상태', score > 60 ? 'pass' : 'fail'),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildCheckItem(String title, String result) {
-    IconData icon;
-    Color color;
-    String label;
-    switch (result) {
-      case 'pass': icon = Icons.check_circle_rounded; color = _green; label = '양호'; break;
-      case 'warning': icon = Icons.error_rounded; color = _orange; label = '주의'; break;
-      default: icon = Icons.cancel_rounded; color = _red; label = '이상';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: const Border.fromBorderSide(BorderSide(color: _borderLight)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 12),
-              Text(title, style: const TextStyle(color: _charcoal, fontSize: 14, fontWeight: FontWeight.w500)),
-            ],
-          ),
-          Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w800)),
-        ],
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      style: const TextStyle(color: _charcoal, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: _brandingBlue, size: 20),
+        filled: true,
+        fillColor: _bgOffWhite,
+        labelStyle: const TextStyle(color: _lightGrey, fontSize: 13),
+        hintStyle: TextStyle(color: _lightGrey.withValues(alpha: 0.6), fontSize: 13),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _borderLight)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _borderLight)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _brandingBlue, width: 1.5)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _red)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _red, width: 1.5)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }

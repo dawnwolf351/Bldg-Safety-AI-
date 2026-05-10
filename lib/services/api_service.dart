@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../models/device.dart';
+import '../models/building.dart';
 
 // 서버와의 API 통신을 전담하는 Service 클래스 (REST API 연동 방식)
 // 백엔드 Swagger API 스펙 기준으로 완전 동기화됨
@@ -404,6 +405,72 @@ class ApiService {
     } catch (e) {
       debugPrint('🚨 HTTP getJetsonDevices Error (목록 조회 실패): $e');
       throw Exception('서버 데이터 파싱 오류 또는 통신 실패: $e');
+    }
+  }
+
+  // ==========================================
+  // [건물(Building) API]
+  // ==========================================
+
+  // 10. 전체 건물 목록 조회 (GET /api/buildings/)
+  Future<List<Building>> getBuildings() async {
+    try {
+      final response = await _dio.get('/api/buildings/');
+      if (response.statusCode == 200) {
+        List<dynamic> data = response.data;
+        return data.map((json) => Building.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('🚨 HTTP getBuildings Error: $e');
+      return [];
+    }
+  }
+
+  // 11. 건물 추가 (POST /api/buildings/)
+  Future<bool> addBuilding(String name, String location, String? completionDate) async {
+    try {
+      final response = await _dio.post(
+        '/api/buildings/',
+        data: {
+          'building_name': name,
+          'location': location,
+          'completion_date': completionDate,
+        },
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('🚨 HTTP addBuilding Error: $e');
+      return false;
+    }
+  }
+
+  // 12. 건물 수정 (PUT /api/buildings/<id>)
+  Future<bool> updateBuilding(int id, String name, String location, String? completionDate) async {
+    try {
+      final response = await _dio.put(
+        '/api/buildings/$id',
+        data: {
+          'building_name': name,
+          'location': location,
+          'completion_date': completionDate,
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP updateBuilding Error: $e');
+      return false;
+    }
+  }
+
+  // 13. 건물 삭제 (DELETE /api/buildings/<id>)
+  Future<bool> deleteBuilding(int id) async {
+    try {
+      final response = await _dio.delete('/api/buildings/$id');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP deleteBuilding Error: $e');
+      return false;
     }
   }
 }
