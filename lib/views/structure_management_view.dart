@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/building_viewmodel.dart';
 import '../models/building.dart';
 import '../theme/app_colors.dart';
@@ -32,6 +33,9 @@ class _StructureManagementViewState extends State<StructureManagementView> {
 
   @override
   Widget build(BuildContext context) {
+    final authVm = Provider.of<AuthViewModel>(context, listen: false);
+    final isAdmin = authVm.currentUser?.role == 'admin' || authVm.currentUser?.role == 'super_admin';
+
     return Consumer<BuildingViewModel>(
       builder: (context, vm, _) {
         return Scaffold(
@@ -72,12 +76,14 @@ class _StructureManagementViewState extends State<StructureManagementView> {
               child: Divider(height: 1, color: _borderLight),
             ),
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _showAddBuildingSheet(context, vm),
-            backgroundColor: _brandingBlue,
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text('건물 추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
+          floatingActionButton: isAdmin 
+            ? FloatingActionButton.extended(
+                onPressed: () => _showAddBuildingSheet(context, vm),
+                backgroundColor: _brandingBlue,
+                icon: const Icon(Icons.add_rounded, color: Colors.white),
+                label: const Text('건물 추가', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              )
+            : null,
           body: vm.isLoading
               ? const Center(child: CircularProgressIndicator(color: _brandingBlue))
               : vm.buildings.isEmpty
@@ -257,6 +263,9 @@ class _StructureManagementViewState extends State<StructureManagementView> {
   }
 
   void _showBuildingDetail(BuildContext context, Building building, BuildingViewModel vm) {
+    final authVm = Provider.of<AuthViewModel>(context, listen: false);
+    final isAdmin = authVm.currentUser?.role == 'admin' || authVm.currentUser?.role == 'super_admin';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -307,40 +316,41 @@ class _StructureManagementViewState extends State<StructureManagementView> {
             _detailRow(Icons.event_rounded, '완공일', building.completionDate ?? '미등록'),
             _detailRow(Icons.access_time_rounded, '등록일', building.createdAt ?? '-'),
             const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _showAddBuildingSheet(context, vm, editBuilding: building);
-                    },
-                    icon: const Icon(Icons.edit_rounded, size: 16),
-                    label: const Text('수정'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _brandingBlue,
-                      side: const BorderSide(color: _brandingBlue),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            if (isAdmin)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showAddBuildingSheet(context, vm, editBuilding: building);
+                      },
+                      icon: const Icon(Icons.edit_rounded, size: 16),
+                      label: const Text('수정'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _brandingBlue,
+                        side: const BorderSide(color: _brandingBlue),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _confirmDelete(ctx, building, vm),
-                    icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
-                    label: const Text('삭제', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _red,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _confirmDelete(ctx, building, vm),
+                      icon: const Icon(Icons.delete_rounded, size: 16, color: Colors.white),
+                      label: const Text('삭제', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _red,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
@@ -378,9 +388,10 @@ class _StructureManagementViewState extends State<StructureManagementView> {
             onPressed: () async {
               Navigator.pop(_);
               Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
               final ok = await vm.deleteBuilding(building.id);
-              if (!ok && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              if (!ok && mounted) {
+                messenger.showSnackBar(
                   const SnackBar(content: Text('삭제 실패: 결함 이력을 먼저 삭제해주세요.'), backgroundColor: Colors.red),
                 );
               }
@@ -499,15 +510,17 @@ class _StructureManagementViewState extends State<StructureManagementView> {
                     child: ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
+                        final messenger = ScaffoldMessenger.of(context);
                         bool ok;
                         if (editBuilding == null) {
                           ok = await vm.addBuilding(nameCtrl.text.trim(), locationCtrl.text.trim(), selectedDate);
                         } else {
                           ok = await vm.updateBuilding(editBuilding.id, nameCtrl.text.trim(), locationCtrl.text.trim(), selectedDate);
                         }
-                        if (context.mounted) {
+
+                        if (mounted && ctx.mounted) {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          messenger.showSnackBar(SnackBar(
                             content: Text(ok ? (editBuilding == null ? '건물이 등록되었습니다.' : '건물 정보가 수정되었습니다.') : '처리에 실패했습니다. 권한을 확인해주세요.'),
                             backgroundColor: ok ? _green : _red,
                           ));

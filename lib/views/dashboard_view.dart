@@ -516,12 +516,6 @@ class _DashboardViewState extends State<DashboardView> {
                 _showReportDeviceSelector(context);
               }),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildActionGridButton(Icons.domain_add, '건물\n추가', brandingBlue, onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('건물 추가 기능 준비 중입니다.')));
-              }),
-            ),
           ],
         ),
       ],
