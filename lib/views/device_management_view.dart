@@ -498,7 +498,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         // Actions (권한별 분기: 최고관리자/현장관리자 제어 가능)
                         Row(
                           children: [
-                            if (userRole == 'admin' || userRole == 'super_admin') ...[
+                            if (userRole != 'viewer') ...[
                               _buildIconButton(
                                   Icons.edit_outlined, brandingBlue, () {
                                 _showEditDeviceModal(context, device);

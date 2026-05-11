@@ -155,25 +155,31 @@ class ApiService {
           'email': email,
           'password': password,
         },
-      );
+      ).timeout(const Duration(seconds: 3)); // 3초만 시도
 
       if (response.statusCode == 200) {
         final data = response.data;
         _tokenCache = data['access_token'];
         _refreshTokenCache = data['refresh_token'];
         
-        // 로컬 저장소에 토큰 캐싱
         await _storage.write(key: 'jwt_token', value: _tokenCache);
         if (_refreshTokenCache != null) {
           await _storage.write(key: 'jwt_refresh_token', value: _refreshTokenCache);
         }
 
         final userInfo = data['user'];
-        // 서버에서 오는 권한: ROLE_ADMIN, ROLE_SUPERADMIN, ROLE_USER
         String parsedRole = 'viewer';
-        if (data['role'] == 'ROLE_SUPERADMIN') {
+        
+        // level 정보를 루트와 user 객체 모두에서 안전하게 추출 (문자열인 경우도 고려)
+        dynamic levelData = data['level'] ?? (userInfo != null ? userInfo['level'] : null);
+        int level = 3;
+        if (levelData != null) {
+          level = int.tryParse(levelData.toString()) ?? 3;
+        }
+        
+        if (level == 1) {
           parsedRole = 'super_admin';
-        } else if (data['role'] == 'ROLE_ADMIN') {
+        } else if (level == 2) {
           parsedRole = 'admin';
         }
 
@@ -184,17 +190,15 @@ class ApiService {
           role: parsedRole,
         );
       }
-      return null;
     } catch (e) {
       debugPrint('🚨 HTTP Login Error: $e');
-      return null;
     }
+    return null;
   }
 
   // 2. 회원가입
   Future<User?> signUp(Map<String, dynamic> requestData) async {
     try {
-      // 역할에 따른 role_id 매핑 (1: 최고관리자(생성불가), 2: 현장관리자, 3: 일반)
       int roleId = 3;
       if (requestData['role'] == 'admin') roleId = 2;
 
@@ -206,17 +210,16 @@ class ApiService {
           'name': requestData['name'],
           'role_id': roleId,
         },
-      );
+      ).timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 201) {
-        // 회원가입 성공 시 바로 로그인 처리
         return login(requestData['email'], requestData['password']);
       }
-      return null;
     } catch (e) {
       debugPrint('🚨 HTTP SignUp Error: $e');
       rethrow;
     }
+    return null;
   }
 
   // 3. 로그아웃 (토큰 영구 파기)
@@ -359,27 +362,10 @@ class ApiService {
 
   // 9. 전체 장치 목록 조회 (GET /api/devices/)
   // 백엔드 응답: List<DeviceResponse> (배열 형태)
-  Future<List<Device>> getJetsonDevices() async {    debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
+  Future<List<Device>> getJetsonDevices() async {
+    debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
     try {
-      // 명시적으로 토큰을 한 번 더 읽어옵니다.
-      String? token = _tokenCache;
-      token ??= await _storage.read(key: 'jwt_token').catchError((e) => null);
-      
-      if (token == null || token.isEmpty) {
-        debugPrint('🚨 [인증 실패] 토큰이 비어있습니다. 로그인이 필요합니다.');
-        throw Exception('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
-      }
-
-      debugPrint('🔑 [인증 확인] 토큰 정상 (앞 10자): ${token.substring(0, 10)}...');
-
-      final response = await _dio.get(
-        '/api/devices/',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
-      );
+      final response = await _dio.get('/api/devices/');
       debugPrint('🔍 [응답] 상태코드: ${response.statusCode}, 데이터 타입: ${response.data.runtimeType}');
 
       if (response.statusCode == 200) {

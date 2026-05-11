@@ -203,7 +203,7 @@ class _LoginViewState extends State<LoginView> {
         ),
         const SizedBox(height: 28),
         const Text(
-          'VIC SOC 안전진단 시스템',
+          'SOC 안전진단 시스템',
           style: TextStyle(
             color: _charcoal,
             fontSize: 26,
