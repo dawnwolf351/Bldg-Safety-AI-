@@ -4,6 +4,10 @@ import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/building_viewmodel.dart';
 import '../models/building.dart';
 import '../theme/app_colors.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 
 class StructureManagementView extends StatefulWidget {
   const StructureManagementView({super.key});
@@ -271,7 +275,7 @@ class _StructureManagementViewState extends State<StructureManagementView> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.65,
+        height: MediaQuery.of(context).size.height * 0.9,
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
         decoration: const BoxDecoration(
           color: _cardWhite,
@@ -310,12 +314,19 @@ class _StructureManagementViewState extends State<StructureManagementView> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             _detailRow(Icons.tag_rounded, 'Building ID', '#${building.id}'),
             _detailRow(Icons.location_city_rounded, '위치', building.location),
             _detailRow(Icons.event_rounded, '완공일', building.completionDate ?? '미등록'),
             _detailRow(Icons.access_time_rounded, '등록일', building.createdAt ?? '-'),
-            const Spacer(),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BuildingMapWidget(address: building.location),
+              ),
+            ),
+            const SizedBox(height: 12),
             if (isAdmin)
               Row(
                 children: [
@@ -359,7 +370,7 @@ class _StructureManagementViewState extends State<StructureManagementView> {
 
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Icon(icon, color: _brandingBlue, size: 18),
@@ -573,6 +584,136 @@ class _StructureManagementViewState extends State<StructureManagementView> {
         focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _red, width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+    );
+  }
+}
+
+class BuildingMapWidget extends StatefulWidget {
+  final String address;
+  const BuildingMapWidget({super.key, required this.address});
+
+  @override
+  State<BuildingMapWidget> createState() => _BuildingMapWidgetState();
+}
+
+class _BuildingMapWidgetState extends State<BuildingMapWidget> {
+  LatLng? _targetLocation;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _geocodeAddress();
+  }
+
+  Future<void> _geocodeAddress() async {
+    try {
+      // 주소 문자열에서 좌표 추출 시도
+      List<Location> locations = await locationFromAddress(widget.address);
+      if (locations.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _targetLocation = LatLng(locations.first.latitude, locations.first.longitude);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Geocoding error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // 에러 시에도 로딩 종료
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Container(
+        color: AppColors.bgOffWhite,
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.brandingBlue),
+        ),
+      );
+    }
+
+    if (_targetLocation == null) {
+      return Container(
+        color: AppColors.bgOffWhite,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_off_rounded, color: AppColors.lightGrey, size: 32),
+              SizedBox(height: 8),
+              Text('지도를 불러올 수 없습니다.\n올바른 주소인지 확인해주세요.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.lightGrey, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: _targetLocation!,
+            zoom: 15.0,
+          ),
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: true,
+          zoomGesturesEnabled: true,
+          scrollGesturesEnabled: true,
+          rotateGesturesEnabled: true,
+          tiltGesturesEnabled: true,
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+            Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+          },
+          markers: {
+            Marker(
+              markerId: const MarkerId('building_marker'),
+              position: _targetLocation!,
+              infoWindow: InfoWindow(
+                title: '건물 위치',
+                snippet: widget.address,
+              ),
+              onTap: () {
+                // 클릭 시 말풍선(InfoWindow)과 함께 스낵바로도 주소 표시
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('위치: ${widget.address}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    backgroundColor: AppColors.brandingBlue,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              },
+            ),
+          },
+        ),
+        // 사용자에게 지도 클릭 유도 텍스트 오버레이
+        Positioned(
+          top: 8,
+          left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.touch_app_rounded, color: Colors.white, size: 14),
+                SizedBox(width: 4),
+                Text('마커를 눌러 주소 확인', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
