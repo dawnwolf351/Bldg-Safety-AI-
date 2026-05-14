@@ -46,7 +46,7 @@ db.sqlite3-journal
 **/android/app/release
 
 # 🤖 AI / Jetson
-/models/
+models/
 *.engine
 *.onnx
 *.pt
