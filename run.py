@@ -4,6 +4,7 @@ from app.extensions import db, bcrypt
 from app.models.role import Role
 from app.models.user import User
 from app.services.tcp_server import start_tcp_server
+from app.models.detection import Detection, RiskAssessment, Alert
 
 app = create_app()
 
