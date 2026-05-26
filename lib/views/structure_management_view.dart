@@ -598,6 +598,7 @@ class BuildingMapWidget extends StatefulWidget {
 
 class _BuildingMapWidgetState extends State<BuildingMapWidget> {
   LatLng? _targetLocation;
+  String? _detailedAddress;
   bool _isLoading = true;
 
   @override
@@ -611,9 +612,34 @@ class _BuildingMapWidgetState extends State<BuildingMapWidget> {
       // 주소 문자열에서 좌표 추출 시도
       List<Location> locations = await locationFromAddress(widget.address);
       if (locations.isNotEmpty) {
+        LatLng latLng = LatLng(locations.first.latitude, locations.first.longitude);
+        String detailed = widget.address;
+        
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
+          if (placemarks.isNotEmpty) {
+            Placemark place = placemarks.first;
+            List<String> parts = [];
+            if (place.administrativeArea?.isNotEmpty == true) parts.add(place.administrativeArea!);
+            if (place.locality?.isNotEmpty == true) parts.add(place.locality!);
+            if (place.subLocality?.isNotEmpty == true) parts.add(place.subLocality!);
+            if (place.thoroughfare?.isNotEmpty == true) parts.add(place.thoroughfare!);
+            if (place.subThoroughfare?.isNotEmpty == true) parts.add(place.subThoroughfare!);
+            
+            if (parts.isNotEmpty) {
+              detailed = parts.join(' ');
+            } else if (place.street?.isNotEmpty == true) {
+              detailed = place.street!;
+            }
+          }
+        } catch (e) {
+          debugPrint('Reverse geocoding error: $e');
+        }
+
         if (mounted) {
           setState(() {
-            _targetLocation = LatLng(locations.first.latitude, locations.first.longitude);
+            _targetLocation = latLng;
+            _detailedAddress = detailed;
             _isLoading = false;
           });
         }
@@ -677,13 +703,13 @@ class _BuildingMapWidgetState extends State<BuildingMapWidget> {
               position: _targetLocation!,
               infoWindow: InfoWindow(
                 title: '건물 위치',
-                snippet: widget.address,
+                snippet: _detailedAddress ?? widget.address,
               ),
               onTap: () {
                 // 클릭 시 말풍선(InfoWindow)과 함께 스낵바로도 주소 표시
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('위치: ${widget.address}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    content: Text('위치: ${_detailedAddress ?? widget.address}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     backgroundColor: AppColors.brandingBlue,
                     duration: const Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,
