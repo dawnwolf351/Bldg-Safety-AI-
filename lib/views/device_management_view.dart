@@ -823,7 +823,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      if (!RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$').hasMatch(mac)) {
+                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) || mac.length < 2) {
                         showError('MAC 주소 형식이 올바르지 않습니다.');
                         return;
                       }
@@ -1020,7 +1020,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         );
                       }
 
-                      if (!RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$').hasMatch(mac)) {
+                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) || mac.length < 2) {
                         showError('MAC 주소 형식이 올바르지 않습니다.');
                         return;
                       }

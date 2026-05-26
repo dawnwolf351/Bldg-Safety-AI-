@@ -13,16 +13,16 @@ class ApiService {
 
   // JWT 토큰을 로컬에 안전하게 보관하는 스토리지
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
+
   // [메모리 캐시] 맥북 시뮬레이터 등 저장소 오류 발생 시 백업용
-  static String? _tokenCache;        // access_token 캐시
+  static String? _tokenCache; // access_token 캐시
   static String? _refreshTokenCache; // refresh_token 캐시 (별도 관리)
 
   // [토큰 갱신 중복 방지] 여러 요청이 동시에 401을 받을 때 refresh를 한 번만 수행
   bool _isRefreshing = false;
 
   // 👉 백엔드 서버 호스팅 주소
-  final String _baseUrl = 'http://121.144.41.106:5000';
+  final String _baseUrl = 'http://121.144.41.106:1310';
 
   ApiService() {
     _dio.options.baseUrl = _baseUrl;
@@ -61,7 +61,9 @@ class ApiService {
 
           try {
             String? refreshTk = _refreshTokenCache;
-            refreshTk ??= await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
+            refreshTk ??= await _storage
+                .read(key: 'jwt_refresh_token')
+                .catchError((e) => null);
 
             if (refreshTk == null) {
               debugPrint('🚨 [인터셉터] Refresh Token 없음 → 갱신 불가');
@@ -88,7 +90,8 @@ class ApiService {
             );
 
             if (refreshResponse.statusCode == 200) {
-              final String? newAccessToken = refreshResponse.data['access_token'];
+              final String? newAccessToken =
+                  refreshResponse.data['access_token'];
 
               if (newAccessToken != null) {
                 // 새 access_token 저장
@@ -98,28 +101,31 @@ class ApiService {
                 } catch (_) {}
 
                 // 새 refresh_token이 응답에 있으면 갱신 (extend=true 시)
-                final String? newRefreshToken = refreshResponse.data['refresh_token'];
+                final String? newRefreshToken =
+                    refreshResponse.data['refresh_token'];
                 if (newRefreshToken != null) {
                   _refreshTokenCache = newRefreshToken;
                   try {
-                    await _storage.write(key: 'jwt_refresh_token', value: newRefreshToken);
+                    await _storage.write(
+                        key: 'jwt_refresh_token', value: newRefreshToken);
                   } catch (_) {}
                 }
 
                 debugPrint('✅ [인터셉터] 토큰 갱신 성공! 원래 요청 재시도...');
 
                 // 원래 요청을 새 토큰으로 재시도
-                requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+                requestOptions.headers['Authorization'] =
+                    'Bearer $newAccessToken';
                 final retryResponse = await _dio.fetch(requestOptions);
                 _isRefreshing = false;
                 return handler.resolve(retryResponse);
               }
             }
 
-            debugPrint('🚨 [인터셉터] 토큰 갱신 실패 (서버 응답: ${refreshResponse.statusCode})');
+            debugPrint(
+                '🚨 [인터셉터] 토큰 갱신 실패 (서버 응답: ${refreshResponse.statusCode})');
             _isRefreshing = false;
             return handler.next(e);
-
           } catch (refreshError) {
             debugPrint('🚨 [인터셉터] 토큰 갱신 중 예외: $refreshError');
             _isRefreshing = false;
@@ -147,7 +153,8 @@ class ApiService {
   //   "user": { "id": 1, "email": "...", "name": "...", "role_name": "ROLE_ADMIN", "level": 2 }
   // }
   // 1. 로그인
-  Future<User?> login(String email, String password, {String? roleOverride}) async {
+  Future<User?> login(String email, String password,
+      {String? roleOverride}) async {
     try {
       final response = await _dio.post(
         '/api/auth/login',
@@ -161,22 +168,24 @@ class ApiService {
         final data = response.data;
         _tokenCache = data['access_token'];
         _refreshTokenCache = data['refresh_token'];
-        
+
         await _storage.write(key: 'jwt_token', value: _tokenCache);
         if (_refreshTokenCache != null) {
-          await _storage.write(key: 'jwt_refresh_token', value: _refreshTokenCache);
+          await _storage.write(
+              key: 'jwt_refresh_token', value: _refreshTokenCache);
         }
 
         final userInfo = data['user'];
         String parsedRole = 'viewer';
-        
+
         // level 정보를 루트와 user 객체 모두에서 안전하게 추출 (문자열인 경우도 고려)
-        dynamic levelData = data['level'] ?? (userInfo != null ? userInfo['level'] : null);
+        dynamic levelData =
+            data['level'] ?? (userInfo != null ? userInfo['level'] : null);
         int level = 3;
         if (levelData != null) {
           level = int.tryParse(levelData.toString()) ?? 3;
         }
-        
+
         if (level == 1) {
           parsedRole = 'super_admin';
         } else if (level == 2) {
@@ -248,10 +257,10 @@ class ApiService {
   //   Body: { "refresh_token": "...", "extend": true }
   //   Response: { "access_token": "...", "refresh_token": "..." (extend 시) }
   Future<bool> refreshToken() async {
-
     try {
       String? refreshTk = _refreshTokenCache;
-      refreshTk ??= await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
+      refreshTk ??=
+          await _storage.read(key: 'jwt_refresh_token').catchError((e) => null);
 
       if (refreshTk == null) {
         debugPrint('🚨 [토큰 연장] Refresh Token 없음 → 연장 불가');
@@ -278,7 +287,8 @@ class ApiService {
         final String? newAccessToken = response.data['access_token'];
         if (newAccessToken != null && newAccessToken.isNotEmpty) {
           _tokenCache = newAccessToken; // 메모리 캐시 즉시 업데이트
-          debugPrint('✅ [토큰 연장] 새 Access Token 캐시 업데이트 성공: ${newAccessToken.substring(0, 10)}...');
+          debugPrint(
+              '✅ [토큰 연장] 새 Access Token 캐시 업데이트 성공: ${newAccessToken.substring(0, 10)}...');
           try {
             await _storage.write(key: 'jwt_token', value: newAccessToken);
           } catch (_) {}
@@ -288,7 +298,8 @@ class ApiService {
           if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
             _refreshTokenCache = newRefreshToken;
             try {
-              await _storage.write(key: 'jwt_refresh_token', value: newRefreshToken);
+              await _storage.write(
+                  key: 'jwt_refresh_token', value: newRefreshToken);
             } catch (_) {}
           }
 
@@ -328,13 +339,15 @@ class ApiService {
   }
 
   // 7. 장치 수정 (PUT /api/devices/<id>)
-  // 백엔드 Swagger: device_name, location만 수정 가능 (mac_address 수정 불가)
-  Future<bool> updateJetsonDevice(int id, String macAddress, String deviceName, String location) async {
+  // 백엔드 Swagger: device_name, location만 수정 가능 (mac_address 수정 불가) -> 수정 가능하게 페이로드 추가
+  Future<bool> updateJetsonDevice(
+      int id, String macAddress, String deviceName, String location) async {
     debugPrint('📝 [수정 시작] 대상 ID: $id, 이름: $deviceName');
     try {
       final response = await _dio.put(
         '/api/devices/$id',
         data: {
+          'mac_address': macAddress,
           'device_name': deviceName,
           'location': location,
         },
@@ -366,7 +379,8 @@ class ApiService {
     debugPrint('🔍 [STEP 0] getJetsonDevices 진입!');
     try {
       final response = await _dio.get('/api/devices/');
-      debugPrint('🔍 [응답] 상태코드: ${response.statusCode}, 데이터 타입: ${response.data.runtimeType}');
+      debugPrint(
+          '🔍 [응답] 상태코드: ${response.statusCode}, 데이터 타입: ${response.data.runtimeType}');
 
       if (response.statusCode == 200) {
         dynamic parsed = response.data;
@@ -383,21 +397,28 @@ class ApiService {
           data = parsed['data'];
         } else if (parsed is Map) {
           for (var v in parsed.values) {
-            if (v is List) { data = v; break; }
+            if (v is List) {
+              data = v;
+              break;
+            }
           }
         }
-        
+
         debugPrint('🔍 [GET 장치목록] 파싱된 장치 수: ${data.length}개');
-        
+
         return data.map((json) {
           return Device(
             // 백엔드 Swagger: device_id 필드명 사용
-            id: (json['device_id'] ?? json['id'] ?? 0) is int 
+            id: (json['device_id'] ?? json['id'] ?? 0) is int
                 ? json['device_id'] ?? json['id'] ?? 0
-                : int.tryParse(json['device_id']?.toString() ?? json['id']?.toString() ?? '0') ?? 0,
+                : int.tryParse(json['device_id']?.toString() ??
+                        json['id']?.toString() ??
+                        '0') ??
+                    0,
             deviceName: json['device_name']?.toString() ?? '알 수 없는 단말',
             location: json['location']?.toString() ?? '위치 미지정',
-            macAddress: json['mac_address']?.toString() ?? '권한 없음', // 레벨3은 숨김 처리됨
+            macAddress:
+                json['mac_address']?.toString() ?? '권한 없음', // 레벨3은 숨김 처리됨
             isOnline: json['is_online'] == true || json['is_online'] == 1,
             lastKnownIp: json['last_known_ip']?.toString() ?? 'IP 무할당',
             lastConnectedAt: json['last_connected_at']?.toString() ?? '기록 없음',
@@ -432,7 +453,8 @@ class ApiService {
   }
 
   // 11. 건물 추가 (POST /api/buildings/)
-  Future<bool> addBuilding(String name, String location, String? completionDate) async {
+  Future<bool> addBuilding(
+      String name, String location, String? completionDate) async {
     try {
       final response = await _dio.post(
         '/api/buildings/',
@@ -450,7 +472,8 @@ class ApiService {
   }
 
   // 12. 건물 수정 (PUT /api/buildings/<id>)
-  Future<bool> updateBuilding(int id, String name, String location, String? completionDate) async {
+  Future<bool> updateBuilding(
+      int id, String name, String location, String? completionDate) async {
     try {
       final response = await _dio.put(
         '/api/buildings/$id',

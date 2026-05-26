@@ -51,8 +51,35 @@ class _DashboardViewState extends State<DashboardView> {
 
   void _onBottomNavTapped(int index) {
     if (index == 4) {
-      // 5번째 탭(인덱스 4)은 로그아웃 역할
-      Provider.of<AuthViewModel>(context, listen: false).logout();
+      // 5번째 탭(인덱스 4)은 로그아웃 역할 - 확인 팝업 표시
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: cardWhite,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('로그아웃', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal)),
+          content: const Text('정말 로그아웃 하시겠습니까?', style: TextStyle(color: textLightGrey)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('아니오', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Provider.of<AuthViewModel>(context, listen: false).logout();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: brandingBlue,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('예', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
     } else {
       setState(() {
         _currentIndex = index;
@@ -388,7 +415,7 @@ class _DashboardViewState extends State<DashboardView> {
                 borderRadius: BorderRadius.circular(12),
                 child: VideoStreamWidget(
                   key: ValueKey('video_${device.id}'),
-                  rtspUrl: 'rtsp://121.144.41.106:6380/cam1',
+                  rtspUrl: 'rtsp://121.144.41.106:6380/live',
                   onFullscreen: (videoController) {
                     Navigator.push(
                       context,
