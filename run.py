@@ -4,6 +4,11 @@ from app.extensions import db, bcrypt
 from app.models.role import Role
 from app.models.user import User
 from app.services.tcp_server import start_tcp_server
+from app.models.detection import Detection, RiskAssessment, Alert
+from app.models.device_state import DeviceState
+
+# 🌟 새로 만든 안전등급 모델도 가져와야 합니다.
+from app.models.safety_grade import SafetyGrade
 
 app = create_app()
 
@@ -32,6 +37,21 @@ if __name__ == '__main__':
                 db.session.commit()
                 print(f"[시스템] 최고관리자 계정({super_admin_email})이 자동 생성되었습니다.")
 
+        # =========================================================
+        # 🌟 3. 안전등급(SafetyGrade) 기초 데이터 자동 세팅 (여기에 추가!)
+        # =========================================================
+        if SafetyGrade.query.count() == 0:
+            grades_data = [
+                SafetyGrade(grade='A', label='우수', state='문제없음', description='결함이 없는 최상의 상태'),
+                SafetyGrade(grade='B', label='양호', state='경미한 결함', description='보조부재에 경미한 결함이 발생했으나, 기능 발휘에는 지장이 없는 상태'),
+                SafetyGrade(grade='C', label='보통', state='주요부재 경미한 결함', description='주요부재에 경미한 결함 또는 보조부재에 광범위한 결함이 발생하여 보수가 필요한 상태'),
+                SafetyGrade(grade='D', label='미흡', state='주요부재 노후화/결함', description='주요부재에 결함이 발생하여 긴급한 보수 및 보강이 필요하며 사용제한 여부를 결정해야 하는 상태'),
+                SafetyGrade(grade='E', label='불량', state='심각한 결함', description='주요부재에 발생한 심각한 결함으로 시설물 안전에 위험이 있어 즉각 사용을 금지하고 개축해야 하는 상태')
+            ]
+            db.session.bulk_save_objects(grades_data)
+            db.session.commit()
+            print("[시스템] 🏗️ 시설물 안전등급(A~E) 초기 데이터 세팅 완료!")
+
     # TCP 소켓 서버를 백그라운드 스레드로 실행 (포트 5001)
     tcp_thread = threading.Thread(target=start_tcp_server, args=(app,))
     tcp_thread.daemon = True
@@ -40,4 +60,3 @@ if __name__ == '__main__':
     # Flask 웹 서버 실행 (메인 스레드, 포트 5000)
     # use_reloader=False: 스레드 중복 생성 방지
     app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
-
