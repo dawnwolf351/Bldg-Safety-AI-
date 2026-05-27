@@ -23,6 +23,9 @@ class _UserManagementViewState extends State<UserManagementView> {
   // 직급 변경 다이얼로그
   void _showRoleChangeDialog(User user) {
     String selectedRole = user.roleName ?? 'ROLE_USER';
+    if (selectedRole == 'ROLE_SUPERADMIN') {
+      selectedRole = 'ROLE_ADMIN'; // 예외 안전장치: 최고관리자는 일반관리자로 선택되도록 폴백
+    }
     final messenger = ScaffoldMessenger.of(context);
     final viewModel = context.read<UserViewModel>();
     
@@ -347,27 +350,29 @@ class _UserManagementViewState extends State<UserManagementView> {
                               ),
                               DataCell(Text(user.createdAt?.split('T').first ?? '정보 없음', style: const TextStyle(fontSize: 13))),
                               DataCell(
-                                Row(
-                                  children: [
-                                    OutlinedButton.icon(
-                                      onPressed: () => _showRoleChangeDialog(user),
-                                      icon: const Icon(Icons.manage_accounts, size: 16),
-                                      label: const Text('권한 수정'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF0F172A),
-                                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                (user.level == 1 || user.roleName == 'ROLE_SUPERADMIN')
+                                    ? const Text('변경 불가 (최고 관리자)', style: TextStyle(color: Colors.grey, fontSize: 13, fontStyle: FontStyle.italic))
+                                    : Row(
+                                        children: [
+                                          OutlinedButton.icon(
+                                            onPressed: () => _showRoleChangeDialog(user),
+                                            icon: const Icon(Icons.manage_accounts, size: 16),
+                                            label: const Text('권한 수정'),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFF0F172A),
+                                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            onPressed: () => _showDeleteDialog(user),
+                                            icon: const Icon(Icons.delete_outline),
+                                            color: Colors.red[400],
+                                            tooltip: '계정 삭제',
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      onPressed: () => _showDeleteDialog(user),
-                                      icon: const Icon(Icons.delete_outline),
-                                      color: Colors.red[400],
-                                      tooltip: '계정 삭제',
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           );
