@@ -6,6 +6,8 @@ import '../models/user.dart';
 import '../models/device.dart';
 import '../models/building.dart';
 import '../models/defect.dart';
+import '../models/device_state.dart';
+import '../models/safety_grade.dart';
 
 // 서버와의 API 통신을 전담하는 Service 클래스 (REST API 연동 방식)
 // 백엔드 Swagger API 스펙 기준으로 완전 동기화됨
@@ -571,6 +573,64 @@ class ApiService {
     } catch (e) {
       debugPrint('🚨 HTTP deleteDefect Error: $e');
       return false;
+    }
+  }
+
+  // ==========================================
+  // [Jetson 기기 상태(DeviceState) API]
+  // 백엔드 Swagger: GET /api/devices/<device_id>/state
+  // ==========================================
+
+  // 17. 특정 기기의 최신 상태 정보 조회
+  Future<DeviceState?> getDeviceState(int deviceId) async {
+    debugPrint('🔍 [기기 상태] ID: $deviceId 조회');
+    try {
+      final response = await _dio.get('/api/devices/$deviceId/state');
+      if (response.statusCode == 200) {
+        return DeviceState.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('🚨 HTTP getDeviceState Error: $e');
+      return null;
+    }
+  }
+
+  // ==========================================
+  // [시설물 안전등급(SafetyGrade) API]
+  // 백엔드 Swagger: GET /api/safety-grades/
+  // ==========================================
+
+  // 18. 시설물 안전등급 기준표 전체 조회
+  Future<List<SafetyGrade>> getSafetyGrades() async {
+    debugPrint('🔍 [안전등급] 기준표 조회');
+    try {
+      final response = await _dio.get('/api/safety-grades/');
+      if (response.statusCode == 200) {
+        dynamic parsed = response.data;
+        if (parsed is String) {
+          parsed = jsonDecode(parsed);
+        }
+
+        List<dynamic> data = [];
+        if (parsed is List) {
+          data = parsed;
+        } else if (parsed is Map) {
+          for (var v in parsed.values) {
+            if (v is List) {
+              data = v;
+              break;
+            }
+          }
+        }
+
+        debugPrint('🔍 [안전등급] 파싱된 등급 수: ${data.length}건');
+        return data.map((json) => SafetyGrade.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('🚨 HTTP getSafetyGrades Error: $e');
+      return [];
     }
   }
 }

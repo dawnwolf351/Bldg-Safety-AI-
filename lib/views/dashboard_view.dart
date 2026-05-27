@@ -12,6 +12,7 @@ import 'inspection_history_view.dart';
 import 'field_monitoring_view.dart';
 import 'structure_management_view.dart';
 import '../services/report_service.dart';
+import '../models/device_state.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -45,7 +46,15 @@ class _DashboardViewState extends State<DashboardView> {
     // [로직 보존]: 화면이 로드되면 데이터 패치 시작
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<DashboardViewModel>(context, listen: false).fetchDashboardData();
-      Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
+      final deviceVM = Provider.of<DeviceViewModel>(context, listen: false);
+      deviceVM.fetchDevices().then((_) {
+        if (!mounted) return;
+        // 기기 목록 로드 후 첫 번째 기기의 상태 정보 조회
+        if (deviceVM.devices.isNotEmpty) {
+          Provider.of<DashboardViewModel>(context, listen: false)
+            .fetchDeviceState(deviceVM.devices.first.id);
+        }
+      });
     });
   }
 
@@ -200,16 +209,35 @@ class _DashboardViewState extends State<DashboardView> {
 
   // 4개의 통계 카드 영역 (모바일용 가로 배치 - 퀵 액션 크기)
   Widget _buildSummaryCardsGrid() {
-    return Row(
-      children: [
-        Expanded(child: _buildAdminStatCard('전체 장치', '142', Icons.dns_outlined, brandingBlue, '94% 정상', true)),
-        const SizedBox(width: 8),
-        Expanded(child: _buildAdminStatCard('발견 결함', '8', Icons.warning_amber_rounded, Colors.redAccent, '+2 증가', false)),
-        const SizedBox(width: 8),
-        Expanded(child: _buildAdminStatCard('평균 정확도', '98%', Icons.track_changes, Colors.green, '+1% 개선', true)),
-        const SizedBox(width: 8),
-        Expanded(child: _buildAdminStatCard('시스템 부하', '42%', Icons.memory, Colors.orangeAccent, '안정적', true)),
-      ],
+    return Consumer2<DeviceViewModel, DashboardViewModel>(
+      builder: (context, deviceVM, dashVM, child) {
+        final devices = deviceVM.devices;
+        final onlineCount = devices.where((d) => d.isOnline).length;
+        final defectCount = dashVM.defects.length;
+
+        // 선택된 기기의 상태 정보
+        DeviceState? selectedState;
+        if (devices.isNotEmpty && _selectedDeviceIndex < devices.length) {
+          selectedState = dashVM.deviceStates[devices[_selectedDeviceIndex].id];
+        }
+
+        final cpuText = selectedState != null ? '${selectedState.cpuUsage.toStringAsFixed(0)}%' : '--';
+        final tempText = selectedState != null ? '${selectedState.maxTemperature.toStringAsFixed(0)}℃' : '--';
+        final cpuStatus = selectedState != null ? (selectedState.cpuUsage < 70 ? '안정적' : '부하 주의') : '조회 중';
+        final tempStatus = selectedState != null ? (selectedState.isOverheated ? '과열 경고!' : '정상 범위') : '조회 중';
+
+        return Row(
+          children: [
+            Expanded(child: _buildAdminStatCard('전체 장치', '${devices.length}', Icons.dns_outlined, brandingBlue, '$onlineCount대 온라인', true)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildAdminStatCard('발견 결함', '$defectCount', Icons.warning_amber_rounded, Colors.redAccent, defectCount > 0 ? '확인 필요' : '이상 없음', defectCount == 0)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildAdminStatCard('CPU 사용률', cpuText, Icons.memory, Colors.green, cpuStatus, selectedState == null || selectedState.cpuUsage < 70)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildAdminStatCard('기기 온도', tempText, Icons.thermostat, Colors.orangeAccent, tempStatus, selectedState == null || !selectedState.isOverheated)),
+          ],
+        );
+      },
     );
   }
 
@@ -351,6 +379,9 @@ class _DashboardViewState extends State<DashboardView> {
               setState(() {
                 _selectedDeviceIndex = index;
               });
+              // 선택된 기기의 상태 정보 비동기 로드
+              Provider.of<DashboardViewModel>(context, listen: false)
+                .fetchDeviceState(device.id);
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -543,6 +574,12 @@ class _DashboardViewState extends State<DashboardView> {
                 _showReportDeviceSelector(context);
               }),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildActionGridButton(Icons.shield_outlined, '안전등급\n기준표', brandingBlue, onTap: () {
+                _showSafetyGradeSheet(context);
+              }),
+            ),
           ],
         ),
       ],
@@ -576,6 +613,131 @@ class _DashboardViewState extends State<DashboardView> {
           ],
         ),
       ),
+    );
+  }
+
+  // 안전등급 기준표 바텀시트 (A~E 등급 레이아웃)
+  void _showSafetyGradeSheet(BuildContext context) {
+    final grades = Provider.of<DashboardViewModel>(context, listen: false).safetyGrades;
+
+    if (grades.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('안전등급 데이터를 아직 불러오지 못했습니다.'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+
+    // 등급별 색상 매핑
+    final gradeColors = {
+      'A': const Color(0xFF22C55E),
+      'B': const Color(0xFF3B82F6),
+      'C': const Color(0xFFF59E0B),
+      'D': const Color(0xFFF97316),
+      'E': const Color(0xFFEF4444),
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 핸들
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+              // 타이틀
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.shield_outlined, color: Color(0xFF2563EB), size: 24),
+                    const SizedBox(width: 8),
+                    const Text('시설물 안전등급 기준표', style: TextStyle(color: Color(0xFF1A1D21), fontSize: 18, fontWeight: FontWeight.w900)),
+                    const Spacer(),
+                    IconButton(icon: const Icon(Icons.close, color: Color(0xFF6B7280)), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+              // 등급 리스트
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: grades.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final grade = grades[index];
+                    final color = gradeColors[grade.grade] ?? Colors.grey;
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 등급 배지
+                          Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(grade.grade, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // 정보
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(grade.label, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(grade.state, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(grade.description, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.4)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

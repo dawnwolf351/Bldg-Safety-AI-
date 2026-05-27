@@ -44,6 +44,7 @@ def create_app():
     api.add_namespace(users_ns, path='/api/users')
     api.add_namespace(building_ns, path='/api/buildings')
     api.add_namespace(defect_ns, path='/api/defects')
+    api.add_namespace(grade_ns, path='/api/safety-grades')
 
     # DB 모델 임포트 및 테이블 자동 생성
     with app.app_context():
@@ -51,6 +52,9 @@ def create_app():
         from app.models.user import User
         from app.models.device import JetsonDevice
         from app.models.building import Building, Defect
+        from app.models.device_state import DeviceState
+        from app.models.safety_grade import SafetyGrade
+        from app.models.detection import Detection, RiskAssessment, Alert
         db.create_all()
 
     # 기본 루트 경로 (접속 확인용)

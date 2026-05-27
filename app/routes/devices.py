@@ -169,3 +169,26 @@ class DeviceDetail(Resource):
         db.session.delete(device)
         db.session.commit()
         return {"message": f"기기({device.device_name})가 완전히 삭제되었습니다."}, HTTPStatus.OK
+
+
+@devices_ns.route('/<int:device_id>/state')
+@devices_ns.param('device_id', '상태를 조회할 기기의 고유 ID')
+class DeviceStateLatest(Resource):
+
+    @devices_ns.doc(
+        description='특정 Jetson 기기의 최신 상태 정보(CPU/GPU/RAM/온도 등)를 조회합니다.',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def get(self, current_user, device_id):
+        """특정 기기의 최신 상태 정보 조회"""
+        from app.models.device_state import DeviceState
+
+        device = JetsonDevice.query.get_or_404(device_id)
+        latest_state = DeviceState.query.filter_by(device_id=device_id).order_by(DeviceState.recorded_at.desc()).first()
+
+        if not latest_state:
+            return {"message": "아직 기록된 상태 데이터가 없습니다.", "device_id": device_id}, HTTPStatus.NOT_FOUND
+
+        return latest_state.to_dict(), HTTPStatus.OK
+
