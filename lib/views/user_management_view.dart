@@ -232,6 +232,15 @@ class _UserManagementViewState extends State<UserManagementView> {
     return '(일반 사용자)';
   }
 
+  // 권한별 영문 표기 깔끔화 헬퍼 메서드 (UI 표시용)
+  String _getRoleDisplayLabel(String role) {
+    String display = role.replaceAll('ROLE_', '');
+    if (display == 'SUPERADMIN') {
+      display = 'SUPER ADMIN';
+    }
+    return display.replaceAll('_', ' ').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -359,7 +368,7 @@ class _UserManagementViewState extends State<UserManagementView> {
                                         border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
                                       ),
                                       child: Text(
-                                        user.roleName ?? user.role,
+                                        _getRoleDisplayLabel(user.roleName ?? user.role),
                                         style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold),
                                       ),
                                     ),
