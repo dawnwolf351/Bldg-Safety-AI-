@@ -48,4 +48,13 @@ class UserViewModel extends ChangeNotifier {
     }
     return success;
   }
+
+  // 관리자 권한으로 새 사용자 등록
+  Future<bool> registerUserAsAdmin({required String email, required String password, required String name, required String roleName}) async {
+    final success = await _apiService.registerUserAsAdmin(email: email, password: password, name: name, roleName: roleName);
+    if (success) {
+      await fetchUsers(); // 등록 성공 시 목록 갱신
+    }
+    return success;
+  }
 }

@@ -124,6 +124,101 @@ class _UserManagementViewState extends State<UserManagementView> {
     );
   }
 
+  // 관리자용 사용자 등록 다이얼로그
+  void _showRegisterDialog() {
+    final messenger = ScaffoldMessenger.of(context);
+    final viewModel = context.read<UserViewModel>();
+    
+    final emailCtrl = TextEditingController();
+    final pwCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    String selectedRole = 'ROLE_USER';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('새 사용자 계정 등록', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: emailCtrl,
+                      decoration: InputDecoration(labelText: '이메일', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: pwCtrl,
+                      obscureText: true,
+                      decoration: InputDecoration(labelText: '비밀번호', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: InputDecoration(labelText: '이름', border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('직급 선택:', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      value: selectedRole,
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(value: 'ROLE_USER', child: Text('일반 사용자 (ROLE_USER)')),
+                        DropdownMenuItem(value: 'ROLE_ADMIN', child: Text('관리자 (ROLE_ADMIN)')),
+                        DropdownMenuItem(value: 'ROLE_SUPERADMIN', child: Text('최고 관리자 (ROLE_SUPERADMIN)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedRole = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('취소', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    if (emailCtrl.text.isEmpty || pwCtrl.text.isEmpty || nameCtrl.text.isEmpty) {
+                      messenger.showSnackBar(const SnackBar(content: Text('모든 필드를 입력해주세요.'), backgroundColor: Colors.orange));
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    final success = await viewModel.registerUserAsAdmin(
+                      email: emailCtrl.text.trim(),
+                      password: pwCtrl.text.trim(),
+                      name: nameCtrl.text.trim(),
+                      roleName: selectedRole,
+                    );
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(success ? '새 사용자가 성공적으로 등록되었습니다.' : '사용자 등록에 실패했습니다. (권한 부족 또는 중복 이메일)'),
+                        backgroundColor: success ? Colors.green : Colors.red,
+                      ),
+                    );
+                  },
+                  child: const Text('계정 생성', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,9 +260,25 @@ class _UserManagementViewState extends State<UserManagementView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '시스템 사용자 목록',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '시스템 사용자 목록',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showRegisterDialog,
+                      icon: const Icon(Icons.person_add, size: 18),
+                      label: const Text('새 사용자 등록'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB), // Blue 600
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(

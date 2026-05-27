@@ -644,4 +644,22 @@ class ApiService {
       return false;
     }
   }
+
+  // 21. 관리자 권한으로 새 사용자 등록 (POST /api/users/register)
+  Future<bool> registerUserAsAdmin({required String email, required String password, required String name, required String roleName}) async {
+    debugPrint('🧑‍💻 [유저 등록] 대상 이메일: $email, 직급: $roleName');
+    try {
+      final data = {
+        'email': email,
+        'password': password,
+        'name': name,
+        'role_name': roleName,
+      };
+      final response = await _dio.post('/api/users/register', data: data);
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP registerUserAsAdmin Error: $e');
+      return false;
+    }
+  }
 }
