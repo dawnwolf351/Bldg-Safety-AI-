@@ -136,7 +136,7 @@ class _DashboardViewState extends State<DashboardView> {
             elevation: 0,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: '대시보드'),
-              BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: '진단 내역'),
+              BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), activeIcon: Icon(Icons.assignment), label: '결함 탐지'),
               BottomNavigationBarItem(icon: Icon(Icons.sensors_outlined), activeIcon: Icon(Icons.sensors), label: '장치 관리'),
               BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: '설정'),
               BottomNavigationBarItem(icon: Icon(Icons.logout), label: '로그아웃'),

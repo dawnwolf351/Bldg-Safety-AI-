@@ -117,7 +117,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
               Icon(Icons.assignment_outlined, color: brandingBlue, size: 28),
               SizedBox(width: 8),
               Text(
-                '진단 내역',
+                '결함 탐지 내역',
                 style: TextStyle(color: textCharcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
               ),
             ],
@@ -196,12 +196,12 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
             ),
             const SizedBox(height: 20),
             const Text(
-              '진단 내역이 없습니다',
+              '결함 탐지 내역이 없습니다',
               style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              'AI 진단이 완료되면 여기에 결과가\n자동으로 표시됩니다.',
+              'AI 탐지가 완료되면 여기에 결과가\n자동으로 표시됩니다.',
               textAlign: TextAlign.center,
               style: TextStyle(color: textLightGrey, fontSize: 13, height: 1.5),
             ),
