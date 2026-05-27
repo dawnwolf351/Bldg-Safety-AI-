@@ -20,6 +20,9 @@ class JetsonDevice(db.Model):
     # 🌟 [추가된 부분] 장비 상태(DeviceState) 테이블과의 1:N 관계 설정!
     # cascade="all, delete-orphan" 속성 덕분에, 이 기기가 삭제되면 관련 상태 로그들도 DB에서 깔끔하게 연쇄 삭제됩니다.
     state_logs = db.relationship('DeviceState', backref='device', lazy=True, cascade="all, delete-orphan")
+    
+    # 장비가 탐지한 결함(Defect)과의 1:N 관계 설정
+    defects = db.relationship('Defect', backref='device', lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {

@@ -12,7 +12,7 @@ class Building(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 건물과 결함은 1:N 관계
-    defects = db.relationship('Defect', backref='building', lazy=True)
+    defects = db.relationship('Defect', backref='building', lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
