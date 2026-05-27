@@ -173,76 +173,191 @@ class ReportService {
     );
   }
 
-  // ============== 장치별 상세 페이지 ==============
+  // ============== 등급별 헬퍼 메서드 ==============
+  static String _getGradeLabel(String? severity) {
+    switch (severity?.toUpperCase()) {
+      case '심각':
+      case 'E':
+        return 'E등급 (불량)';
+      case 'D':
+        return 'D등급 (미흡)';
+      case '주의':
+      case 'C':
+        return 'C등급 (보통)';
+      case '경미':
+      case 'B':
+        return 'B등급 (양호)';
+      case 'A':
+        return 'A등급 (우수)';
+      default:
+        return '기타 등급';
+    }
+  }
+
+  static PdfColor _getGradeColor(String gradeLabel) {
+    switch (gradeLabel) {
+      case 'E등급 (불량)':
+        return PdfColor.fromHex('#EF4444'); // Red
+      case 'D등급 (미흡)':
+        return PdfColor.fromHex('#F97316'); // Orange
+      case 'C등급 (보통)':
+        return PdfColor.fromHex('#F59E0B'); // Amber
+      case 'B등급 (양호)':
+        return PdfColor.fromHex('#3B82F6'); // Blue
+      case 'A등급 (우수)':
+        return PdfColor.fromHex('#10B981'); // Green
+      default:
+        return PdfColor.fromHex('#6B7280'); // Grey
+    }
+  }
+
+  // ============== 장소 및 등급별 상세 페이지 ==============
   static List<pw.Widget> _buildDeviceDetailPages(pw.Context context, List<Device> devices, List<Defect> allDefects) {
     final widgets = <pw.Widget>[];
 
-    widgets.add(pw.Text('장치별 상세 분석 결과', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)));
+    widgets.add(pw.Text('장소 및 등급별 상세 분석 결과', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)));
     widgets.add(pw.SizedBox(height: 4));
-    widgets.add(pw.Text('DEVICE ANALYSIS DETAILS', style: pw.TextStyle(color: PdfColor.fromHex('#00E5FF'), fontSize: 10)));
+    widgets.add(pw.Text('LOCATION & GRADE ANALYSIS DETAILS', style: pw.TextStyle(color: PdfColor.fromHex('#00E5FF'), fontSize: 10)));
     widgets.add(pw.SizedBox(height: 16));
 
-    for (int i = 0; i < devices.length; i++) {
-      final device = devices[i];
-      // 이 기기와 관련된 결함만 필터링
-      final deviceDefects = allDefects.where((d) => d.deviceId == device.id).toList();
-      
-      // PDF 레이아웃 깨짐(Unbounded / No room) 방지를 위해 최대 5건까지만 요약 노출하고 더보기 링크 제공
-      final displayDefects = deviceDefects.take(5).toList();
-      final hasMore = deviceDefects.length > 5;
+    // 1. 장치를 장소(location)별로 그룹화
+    final Map<String, List<Device>> locationGroups = {};
+    for (var device in devices) {
+      locationGroups.putIfAbsent(device.location, () => []).add(device);
+    }
 
+    // 2. 장소별로 루프 실행
+    locationGroups.forEach((location, locDevices) {
+      // 장소 헤더 (안정적인 페이지 브레이크를 위해 직접 추가)
       widgets.add(
         pw.Container(
-          margin: const pw.EdgeInsets.only(bottom: 16),
-          padding: const pw.EdgeInsets.all(16),
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+          margin: const pw.EdgeInsets.only(top: 16, bottom: 8),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey300),
-            borderRadius: pw.BorderRadius.circular(8),
+            color: PdfColor.fromHex('#1E293B'),
+            borderRadius: pw.BorderRadius.circular(4),
           ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // 장치 헤더
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(device.deviceName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: pw.BoxDecoration(
-                      color: device.isOnline ? PdfColor.fromHex('#DCFCE7') : PdfColor.fromHex('#FEE2E2'),
-                      borderRadius: pw.BorderRadius.circular(8),
-                    ),
-                    child: pw.Text(
-                      device.isOnline ? '온라인' : '오프라인',
-                      style: pw.TextStyle(
-                        color: device.isOnline ? PdfColor.fromHex('#166534') : PdfColor.fromHex('#991B1B'),
-                        fontSize: 9,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 8),
-              pw.Text('위치: ${device.location}  |  MAC: ${device.macAddress}', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
-              pw.SizedBox(height: 12),
-              // 분석 결과
-              pw.Text('AI 분석 결과 (최대 5건 표시)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-              pw.SizedBox(height: 8),
-              _buildAnalysisTable(displayDefects),
-              if (hasMore) ...[
-                pw.SizedBox(height: 8),
-                pw.Text(
-                  '* 외 ${deviceDefects.length - 5}건의 진단 이력이 더 존재합니다. 전체 상세 이력은 모니터링 시스템을 참고하십시오.',
-                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 8),
-                ),
-              ],
-            ],
+          child: pw.Text(
+            '📍 점검 장소: $location',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 12),
           ),
         ),
       );
-    }
+
+      // 해당 장소에 속한 장치별로 루프 실행
+      for (var device in locDevices) {
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('📷 장치: ${device.deviceName}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                pw.Text('MAC: ${device.macAddress}', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 8)),
+              ],
+            ),
+          ),
+        );
+
+        // 이 장치와 관련된 결함 목록 필터링
+        final deviceDefects = allDefects.where((d) => d.deviceId == device.id).toList();
+
+        if (deviceDefects.isEmpty) {
+          // 결함이 없는 경우 깔끔한 안내 문구 표시
+          widgets.add(
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(10),
+              margin: const pw.EdgeInsets.only(bottom: 12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0')),
+                borderRadius: pw.BorderRadius.circular(6),
+              ),
+              child: pw.Text('✅ 감지된 구조물 결함이 없으며, 안전한 상태입니다.', style: const pw.TextStyle(color: PdfColors.green700, fontSize: 9)),
+            ),
+          );
+          continue;
+        }
+
+        // 등급별 결함 그룹화 (E, D, C, B, A 순으로 정렬)
+        final Map<String, List<Defect>> gradeGroups = {
+          'E등급 (불량)': [],
+          'D등급 (미흡)': [],
+          'C등급 (보통)': [],
+          'B등급 (양호)': [],
+          'A등급 (우수)': [],
+          '기타 등급': [],
+        };
+
+        for (var d in deviceDefects) {
+          final label = _getGradeLabel(d.severity);
+          gradeGroups[label]!.add(d);
+        }
+
+        // 각 등급별로 결함 테이블 렌더링
+        gradeGroups.forEach((gradeLabel, defects) {
+          if (defects.isEmpty) return; // 결함이 없는 등급은 패스
+
+          final displayDefects = defects.take(10).toList();
+          final hasMore = defects.length > 10;
+
+          // 등급별 소제목
+          widgets.add(
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 6, bottom: 4),
+              child: pw.Row(
+                children: [
+                  pw.Container(
+                    width: 6,
+                    height: 6,
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      color: _getGradeColor(gradeLabel),
+                    ),
+                  ),
+                  pw.SizedBox(width: 6),
+                  pw.Text('$gradeLabel - ${defects.length}건 감지', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                ],
+              ),
+            ),
+          );
+
+          // 등급별 결함 테이블 (최대 10개 표시)
+          widgets.add(
+            pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 8),
+              child: pw.TableHelper.fromTextArray(
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: PdfColors.white),
+                headerDecoration: pw.BoxDecoration(color: _getGradeColor(gradeLabel)),
+                cellStyle: const pw.TextStyle(fontSize: 8),
+                headers: ['결함 분류', '시스템 판정', '비고 (코멘트)', '탐지 일시'],
+                data: displayDefects.map((d) => [
+                  d.defectType,
+                  d.statusLabel,
+                  d.comment ?? '코멘트 없음',
+                  DateFormat('yyyy-MM-dd HH:mm').format(d.detectionTime),
+                ]).toList(),
+              ),
+            ),
+          );
+
+          // 10건 초과 안내 메시지
+          if (hasMore) {
+            widgets.add(
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 8),
+                child: pw.Text(
+                  '* 외 ${defects.length - 10}건의 $gradeLabel 결함 이력이 더 존재합니다. 전체 상세 이력은 모니터링 시스템을 참고하십시오.',
+                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 8),
+                ),
+              ),
+            );
+          }
+        });
+      }
+    });
 
     return widgets;
   }
@@ -430,31 +545,6 @@ class ReportService {
         e.value.location,
         e.value.macAddress,
         e.value.isOnline ? '온라인' : '오프라인',
-      ]).toList(),
-    );
-  }
-
-  static pw.Widget _buildAnalysisTable(List<Defect> defects) {
-    if (defects.isEmpty) {
-      return pw.TableHelper.fromTextArray(
-        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9, color: PdfColors.white),
-        headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#1E293B')),
-        cellStyle: const pw.TextStyle(fontSize: 9),
-        headers: ['결함 종류', '심각도', '상태', '탐지 일시'],
-        data: [['결함 없음', '해당 없음', 'SAFE', _dateOnly]],
-      );
-    }
-
-    return pw.TableHelper.fromTextArray(
-      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9, color: PdfColors.white),
-      headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#1E293B')),
-      cellStyle: const pw.TextStyle(fontSize: 9),
-      headers: ['결함 분류', '발견된 심각도', '시스템 판정', '비고 (코멘트)'],
-      data: defects.map((d) => [
-        d.defectType,
-        d.statusLabel, // e.g. 위험 감지
-        d.statusCode,  // CRITICAL
-        d.comment ?? '코멘트 없음',
       ]).toList(),
     );
   }
