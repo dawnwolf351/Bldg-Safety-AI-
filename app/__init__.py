@@ -7,6 +7,7 @@ from app.routes.auth import auth_ns
 from app.routes.devices import devices_ns
 from app.routes.users import users_ns
 from app.routes.buildings import building_ns, defect_ns
+from app.routes.safety_grades import grade_ns
 
 def create_app():
     app = Flask(__name__)
