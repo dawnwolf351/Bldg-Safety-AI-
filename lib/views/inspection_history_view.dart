@@ -223,7 +223,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     
     int selectedBuildingId = buildings.first.id;
     int selectedDeviceId = devices.first.id;
-    String selectedSeverity = '경미';
+    String selectedSeverity = 'A';
 
     if (!mounted) return;
 
@@ -359,16 +359,18 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                       ),
                       const SizedBox(height: 12),
 
-                      // 심각도 드롭다운
-                      _buildFormLabel('심각도'),
+                      // 심각도 드롭다운 (안전등급 기준)
+                      _buildFormLabel('안전 등급 (심각도)'),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         initialValue: selectedSeverity,
                         decoration: _inputDecoration(null),
                         items: const [
-                          DropdownMenuItem(value: '경미', child: Text('경미 (양호)')),
-                          DropdownMenuItem(value: '주의', child: Text('주의 (경고)')),
-                          DropdownMenuItem(value: '심각', child: Text('심각 (위험)')),
+                          DropdownMenuItem(value: 'A', child: Text('A (우수 / 안전)')),
+                          DropdownMenuItem(value: 'B', child: Text('B (양호 / 안전)')),
+                          DropdownMenuItem(value: 'C', child: Text('C (보통 / 주의)')),
+                          DropdownMenuItem(value: 'D', child: Text('D (미흡 / 위험)')),
+                          DropdownMenuItem(value: 'E', child: Text('E (불량 / 위험)')),
                         ],
                         onChanged: (v) {
                           if (v != null) dialogSetState(() => selectedSeverity = v);
