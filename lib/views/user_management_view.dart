@@ -220,6 +220,18 @@ class _UserManagementViewState extends State<UserManagementView> {
     );
   }
 
+  // 권한별 한글 설명 라벨 반환 헬퍼 메서드
+  String _getRoleKoreanLabel(String role) {
+    if (role == 'ROLE_SUPERADMIN' || role == 'ROLE_SUPER_ADMIN') {
+      return '(최고 관리자)';
+    } else if (role == 'ROLE_ADMIN') {
+      return '(현장 관리자)';
+    } else if (role == 'ROLE_USER') {
+      return '(일반 사용자)';
+    }
+    return '(일반 사용자)';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -311,7 +323,7 @@ class _UserManagementViewState extends State<UserManagementView> {
                         rows: users.map((user) {
                           // 직급 배지 색상 결정
                           Color badgeColor = Colors.grey;
-                          if (user.level == 1 || user.roleName == 'ROLE_SUPERADMIN') {
+                          if (user.level == 1 || user.roleName == 'ROLE_SUPERADMIN' || user.roleName == 'ROLE_SUPER_ADMIN') {
                             badgeColor = Colors.purple;
                           } else if (user.level == 2 || user.roleName == 'ROLE_ADMIN') {
                             badgeColor = Colors.blue;
@@ -335,17 +347,28 @@ class _UserManagementViewState extends State<UserManagementView> {
                               ),
                               DataCell(Text(user.email, style: const TextStyle(color: Color(0xFF64748B)))),
                               DataCell(
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: badgeColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-                                  ),
-                                  child: Text(
-                                    user.roleName ?? user.role,
-                                    style: TextStyle(color: badgeColor, fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: badgeColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Text(
+                                        user.roleName ?? user.role,
+                                        style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _getRoleKoreanLabel(user.roleName ?? user.role),
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 10, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
                                 ),
                               ),
                               DataCell(Text(user.createdAt?.split('T').first ?? '정보 없음', style: const TextStyle(fontSize: 13))),
