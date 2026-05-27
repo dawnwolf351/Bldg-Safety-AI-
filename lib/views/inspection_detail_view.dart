@@ -6,7 +6,8 @@ import '../models/defect.dart';
 import '../models/building.dart';
 import '../viewmodels/building_viewmodel.dart';
 import '../services/report_service.dart';
-import 'package:audioplayers/audioplayers.dart';
+import '../utils/alert_utils.dart';
+
 class InspectionDetailView extends StatefulWidget {
   final Defect defect;
 
@@ -264,7 +265,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                     child: ElevatedButton.icon(
                       onPressed: () {
                         if (isCritical) {
-                          _showEmergencyAlertPopup(context);
+                          EmergencyAlert.show(context);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -295,56 +296,6 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     );
   }
 
-  void _showEmergencyAlertPopup(BuildContext context) async {
-    final player = AudioPlayer();
-    
-    // 삐용삐용 사이렌 소리 재생 (반복 설정)
-    await player.setReleaseMode(ReleaseMode.loop);
-    await player.play(AssetSource('siren.wav'));
-
-    if (!context.mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent, // 화이트 테마 깔끔하게
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderLight, width: 1),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: _redEmergency),
-            const SizedBox(width: 8),
-            const Text('긴급 위험 감지', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Text(
-          '현장 시스템에 심각한 이상이 감지되었습니다.\n모든 관리자에게 알림이 전송되며, 즉각적인 현장 대피 및 보수 지시가 필요합니다.',
-          style: TextStyle(color: textLightGrey, height: 1.5, fontSize: 13),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () async {
-              await player.stop();
-              await player.dispose();
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-              Navigator.pop(context); // 이전 화면으로 복귀
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _redEmergency,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            child: const Text('알림 종료 및 확인', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
 
   /* =========== 세부 데이터 탭 모듈 =========== */
   Widget _buildDataTab(Defect defect, String dateStr) {

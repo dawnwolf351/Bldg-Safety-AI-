@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/defect.dart';
 import '../services/api_service.dart';
+import '../utils/globals.dart';
+import '../utils/alert_utils.dart';
 
 /// 진단 이력(결함) 데이터를 관리하는 ViewModel
 /// DeviceViewModel과 동일한 패턴 (폴링, 에러 처리, CRUD)
@@ -31,10 +33,25 @@ class InspectionViewModel extends ChangeNotifier {
   Future<void> _silentFetch() async {
     try {
       final latest = await ApiService().getDefects();
-      // 데이터가 실제로 변했을 때만 UI 갱신
+      // 데이터가 실제로 변했을 때만 UI 갱신 및 새로운 위험 알림 체크
       if (_isDefectListChanged(latest)) {
+        
+        // 새로 추가된 결함 필터링 (기존 _defects 에 없는 항목들)
+        final newDefects = latest.where((l) => !_defects.any((d) => d.defectId == l.defectId)).toList();
+        
+        // 새로 추가된 결함 중 심각도가 CRITICAL(E등급)인 것이 있는지 확인
+        final hasNewCritical = newDefects.any((d) => d.statusCode == 'CRITICAL');
+
         _defects = latest;
         notifyListeners();
+
+        // 만약 새로운 E등급(CRITICAL) 결함이 감지되었다면 실시간으로 알림 팝업 띄우기
+        if (hasNewCritical) {
+          final context = globalNavKey.currentContext;
+          if (context != null && context.mounted) {
+            EmergencyAlert.show(context);
+          }
+        }
       }
     } catch (e) {
       // 폴링 중 에러는 조용히 무시
