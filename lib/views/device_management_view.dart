@@ -4,6 +4,7 @@ import '../viewmodels/device_viewmodel.dart';
 import '../models/device.dart';
 import '../services/api_service.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/building_viewmodel.dart';
 
 class DeviceManagementView extends StatefulWidget {
   const DeviceManagementView({super.key});
@@ -18,6 +19,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
+      Provider.of<BuildingViewModel>(context, listen: false).fetchBuildings();
     });
   }
 
@@ -159,17 +161,29 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Facility Cards
+                            // Facility Cards (실제 데이터 연동)
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20.0),
-                              child: Column(
-                                children: [
-                                  _buildFacilityCard('본관', 85),
-                                  _buildFacilityCard('수덕전', 60),
-                                  _buildFacilityCard('효민갤러리', 100),
-                                  _buildFacilityCard('정보공학관', 45),
-                                ],
+                              child: Consumer<BuildingViewModel>(
+                                builder: (context, buildingVM, child) {
+                                  if (buildingVM.isLoading) {
+                                    return const Center(child: CircularProgressIndicator(color: brandingBlue));
+                                  }
+                                  if (buildingVM.buildings.isEmpty) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 30),
+                                      child: Center(child: Text('등록된 시설물이 없습니다.', style: TextStyle(color: textLightGrey))),
+                                    );
+                                  }
+                                  return Column(
+                                    children: buildingVM.buildings.map((b) {
+                                      // 점검 진행률은 건물이 추가될 때 기본 100% (또는 UI 유지용 임의값)
+                                      int progress = 100 - ((b.id % 3) * 15); 
+                                      return _buildFacilityCard(b.buildingName, progress);
+                                    }).toList(),
+                                  );
+                                },
                               ),
                             ),
 
