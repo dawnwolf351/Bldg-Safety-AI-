@@ -151,6 +151,9 @@ class UserDetail(Resource):
                 return {"error": "보안 위반: 일반 계정을 최고관리자로 승급시킬 수 없습니다."}, HTTPStatus.FORBIDDEN
             target_user.role_id = new_role.id
 
+        # 가입일(created_at)을 최초 가입일로 고정 유지하여 DB ON UPDATE 트리거 방지
+        target_user.created_at = target_user.created_at
+
         db.session.commit()
         return {"message": f"[{target_user.email}] 계정의 정보가 성공적으로 수정되었습니다."}, HTTPStatus.OK
 
