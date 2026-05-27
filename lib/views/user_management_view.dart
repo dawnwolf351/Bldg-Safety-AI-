@@ -71,7 +71,7 @@ class _UserManagementViewState extends State<UserManagementView> {
                     final success = await viewModel.updateUser(user.id, roleName: selectedRole);
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text(success ? '직급이 성공적으로 변경되었습니다.' : '직급 변경에 실패했습니다. (최고관리자 권한 필요)'),
+                        content: Text(success ? '직급이 성공적으로 변경되었습니다.' : '사용자 권한 변경에 대한 권한이 존재하지 않습니다. (최고관리자 권한 필요)'),
                         backgroundColor: success ? Colors.green : Colors.red,
                       ),
                     );
@@ -112,7 +112,7 @@ class _UserManagementViewState extends State<UserManagementView> {
               final success = await viewModel.deleteUser(user.id);
               messenger.showSnackBar(
                 SnackBar(
-                  content: Text(success ? '사용자 계정이 삭제되었습니다.' : '계정 삭제에 실패했습니다.'),
+                  content: Text(success ? '사용자 계정이 삭제되었습니다.' : '사용자 삭제에 대한 권한이 존재하지 않습니다. (최고관리자 권한 필요)'),
                   backgroundColor: success ? Colors.green : Colors.red,
                 ),
               );
@@ -204,7 +204,7 @@ class _UserManagementViewState extends State<UserManagementView> {
                     );
                     messenger.showSnackBar(
                       SnackBar(
-                        content: Text(success ? '새 사용자가 성공적으로 등록되었습니다.' : '사용자 등록에 실패했습니다. (권한 부족 또는 중복 이메일)'),
+                        content: Text(success ? '새 사용자가 성공적으로 등록되었습니다.' : '사용자 등록에 대한 권한이 존재하지 않습니다. (혹은 중복 이메일)'),
                         backgroundColor: success ? Colors.green : Colors.red,
                       ),
                     );
