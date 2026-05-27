@@ -3,6 +3,7 @@ import threading
 import json
 from datetime import datetime
 from app.models.device import JetsonDevice
+from app.models.device_state import DeviceState
 from app.extensions import db
 
 
@@ -36,15 +37,33 @@ def handle_client(client_socket, addr, app):
                         client_socket.send("UNAUTHORIZED: 앱에서 먼저 기기를 등록해주세요.".encode('utf-8'))
                         break
 
-                    # IP 주소 및 상태 업데이트
+                    # 1. 기기 기본 정보(IP 및 온라인 상태) 업데이트
                     device.last_known_ip = addr[0]
                     device.is_online = True
                     device.last_connected_at = datetime.utcnow()
 
-                    db.session.commit()
-                    print(f"✅ [TCP 서버] 정상 수신: MAC={mac}, 데이터={info}")
+                    # 2. 장비 상태(DeviceState) DB에 저장 (젯슨이 보내는 데이터에 해당 필드가 있을 때만)
+                    new_state = DeviceState(
+                        device_id=device.device_id,
+                        cpu_usage=info.get('cpu_usage', 0.0),
+                        gpu_usage=info.get('gpu_usage', 0.0),
+                        gpu_memory_usage=info.get('gpu_memory_usage', 0.0),
+                        ram_usage=info.get('ram_usage', 0.0),
+                        temperature_soc=info.get('temperature_soc', 0.0),
+                        temperature_cpu=info.get('temperature_cpu', 0.0),
+                        temperature_gpu=info.get('temperature_gpu', 0.0),
+                        inference_fps=info.get('inference_fps'),
+                        model_name=info.get('model_name'),
+                        camera_status=info.get('camera_status'),
+                        depth_sensor_status=info.get('depth_sensor_status')
+                    )
+                    db.session.add(new_state)
 
-                    # Jetson에게 응답 전송
+                    # 3. 한 번의 커밋으로 기기 정보 업데이트와 상태 추가를 동시에 반영
+                    db.session.commit()
+                    print(f"✅ [TCP 서버] 상태 기록 완료: MAC={mac}, CPU={info.get('cpu_usage', 0)}%, 온도={info.get('temperature_cpu', 0)}℃")
+
+                    # Jetson에게 정상 수신 응답 전송
                     client_socket.send('{"status": "ok"}'.encode('utf-8'))
 
         except ConnectionResetError:
