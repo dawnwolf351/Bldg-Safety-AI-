@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/settings_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../theme/app_colors.dart';
+import 'user_management_view.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -59,6 +60,12 @@ class _SettingsViewState extends State<SettingsView> {
                       user?.email ?? 'user@example.com',
                       roleKo,
                     ),
+                    if (user?.level == 1 || user?.level == 2 || user?.role == 'super_admin' || user?.role == 'admin' || user?.roleName == 'ROLE_SUPERADMIN' || user?.roleName == 'ROLE_ADMIN') ...[
+                      const SizedBox(height: 32),
+                      _sectionLabel('관리자 전용'),
+                      const SizedBox(height: 10),
+                      _buildAdminSection(context),
+                    ],
                     const SizedBox(height: 32),
                     _sectionLabel('제품 사용과 관리'),
                     const SizedBox(height: 10),
@@ -162,6 +169,32 @@ class _SettingsViewState extends State<SettingsView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ─── 관리자 전용 ──────────────────────────────────────────────
+  Widget _buildAdminSection(BuildContext context) {
+    return _card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: _bgOffWhite, borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.manage_accounts, color: _charcoal, size: 22),
+        ),
+        title: const Text('사용자 계정 관리', style: TextStyle(color: _charcoal, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
+        subtitle: const Padding(
+          padding: EdgeInsets.only(top: 3),
+          child: Text('앱을 이용하는 모든 사용자의 권한과 계정을 관리합니다.', style: TextStyle(color: _lightGrey, fontSize: 12)),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: _borderLight),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const UserManagementView()),
+          );
+        },
       ),
     );
   }

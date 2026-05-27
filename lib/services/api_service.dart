@@ -595,5 +595,53 @@ class ApiService {
     }
   }
 
-  // [시설물 안전등급 API 삭제 완료 - 프론트엔드 하드코딩 뷰로 분리됨]
+  // ==========================================
+  // [사용자(User) 관리 API] - 조회, 수정, 삭제 (관리자 전용)
+  // 백엔드 Swagger: /api/users/
+  // ==========================================
+
+  // 18. 전체 사용자 목록 조회 (GET /api/users/)
+  Future<List<User>> getUsers() async {
+    debugPrint('🔍 [유저 목록] getUsers 호출');
+    try {
+      final response = await _dio.get('/api/users/');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => User.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('🚨 HTTP getUsers Error: $e');
+      throw Exception('사용자 목록 조회 실패: $e');
+    }
+  }
+
+  // 19. 특정 사용자 정보(비밀번호, 직급) 수정 (PUT /api/users/<id>)
+  Future<bool> updateUser(String userId, {String? name, String? password, String? roleName}) async {
+    debugPrint('📝 [유저 수정] 대상 ID: $userId');
+    try {
+      final Map<String, dynamic> data = {};
+      if (name != null && name.isNotEmpty) data['name'] = name;
+      if (password != null && password.isNotEmpty) data['password'] = password;
+      if (roleName != null && roleName.isNotEmpty) data['role_name'] = roleName;
+
+      final response = await _dio.put('/api/users/$userId', data: data);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP updateUser Error: $e');
+      return false;
+    }
+  }
+
+  // 20. 특정 사용자 삭제 (DELETE /api/users/<id>)
+  Future<bool> deleteUser(String userId) async {
+    debugPrint('🗑️ [유저 삭제] 대상 ID: $userId');
+    try {
+      final response = await _dio.delete('/api/users/$userId');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP deleteUser Error: $e');
+      return false;
+    }
+  }
 }

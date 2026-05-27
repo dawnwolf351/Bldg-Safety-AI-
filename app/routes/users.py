@@ -86,6 +86,35 @@ class UserRegister(Resource):
         return {"message": f"{name}님 환영합니다! {target_role.description} 권한으로 가입되었습니다."}, HTTPStatus.CREATED
 
 
+@users_ns.route('/')
+class UserList(Resource):
+    @users_ns.doc(
+        description='시스템에 등록된 모든 사용자 목록을 조회합니다. (최고관리자 레벨 1 및 관리자 레벨 2 전용)',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def get(self, current_user):
+        """전체 유저 목록 조회"""
+        current_level = current_user.role_info.level if current_user.role_info else 3
+
+        if current_level > 2:
+            return {"error": "접근 거부: 유저 목록 조회는 관리자 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
+
+        users = User.query.all()
+        result = []
+        for u in users:
+            result.append({
+                "id": u.id,
+                "email": u.email,
+                "name": u.name,
+                "role_name": u.role_info.role_name if u.role_info else 'ROLE_USER',
+                "level": u.role_info.level if u.role_info else 3,
+                "created_at": u.created_at.isoformat() if u.created_at else None
+            })
+
+        return result, HTTPStatus.OK
+
+
 @users_ns.route('/<int:user_id>')
 @users_ns.param('user_id', '수정/삭제할 유저의 고유 ID 번호')
 class UserDetail(Resource):
