@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../models/device.dart';
 import '../models/building.dart';
+import '../models/defect.dart';
 
 // 서버와의 API 통신을 전담하는 Service 클래스 (REST API 연동 방식)
 // 백엔드 Swagger API 스펙 기준으로 완전 동기화됨
@@ -497,6 +498,78 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('🚨 HTTP deleteBuilding Error: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
+  // [결함(Defect) API] - 진단 이력 조회/상세/삭제
+  // 백엔드 Swagger: /api/defects/
+  // ==========================================
+
+  // 14. 전체 결함 이력 목록 조회 (GET /api/defects/)
+  Future<List<Defect>> getDefects() async {
+    debugPrint('🔍 [결함 목록] getDefects 호출');
+    try {
+      final response = await _dio.get('/api/defects/');
+      debugPrint('🔍 [결함 목록] 상태코드: ${response.statusCode}, 데이터 타입: ${response.data.runtimeType}');
+
+      if (response.statusCode == 200) {
+        dynamic parsed = response.data;
+        if (parsed is String) {
+          parsed = jsonDecode(parsed);
+        }
+
+        List<dynamic> data = [];
+        if (parsed is List) {
+          data = parsed;
+        } else if (parsed is Map && parsed['defects'] != null) {
+          data = parsed['defects'];
+        } else if (parsed is Map && parsed['data'] != null) {
+          data = parsed['data'];
+        } else if (parsed is Map) {
+          for (var v in parsed.values) {
+            if (v is List) {
+              data = v;
+              break;
+            }
+          }
+        }
+
+        debugPrint('🔍 [결함 목록] 파싱된 결함 수: ${data.length}건');
+        return data.map((json) => Defect.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('🚨 HTTP getDefects Error (결함 목록 조회 실패): $e');
+      throw Exception('결함 목록 조회 실패: $e');
+    }
+  }
+
+  // 15. 특정 결함 상세 조회 (GET /api/defects/<id>)
+  Future<Defect?> getDefectDetail(int defectId) async {
+    debugPrint('🔍 [결함 상세] ID: $defectId 조회');
+    try {
+      final response = await _dio.get('/api/defects/$defectId');
+      if (response.statusCode == 200) {
+        return Defect.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('🚨 HTTP getDefectDetail Error: $e');
+      return null;
+    }
+  }
+
+  // 16. 결함 삭제 (DELETE /api/defects/<id>) - 관리자 레벨 2 이상
+  Future<bool> deleteDefect(int defectId) async {
+    debugPrint('🗑️ [결함 삭제] 대상 ID: $defectId');
+    try {
+      final response = await _dio.delete('/api/defects/$defectId');
+      debugPrint('✅ [결함 삭제] 상태코드: ${response.statusCode}');
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      debugPrint('🚨 HTTP deleteDefect Error: $e');
       return false;
     }
   }

@@ -3,7 +3,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../models/device.dart';
+import '../models/defect.dart';
 
 /// AI 안전 진단 보고서를 PDF로 생성하고 미리보기/저장하는 서비스
 class ReportService {
@@ -370,6 +372,154 @@ class ReportService {
         item['confidence'] ?? '',
         item['note'] ?? '',
       ]).toList(),
+    );
+  }
+
+  // ============== 특정 결함(Defect) 상세 보고서 자동 생성 ==============
+  static Future<void> generateDefectReport(BuildContext context, Defect defect, {String? buildingName, String? buildingLocation}) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.notoSansKRRegular();
+    final fontBold = await PdfGoogleFonts.notoSansKRBold();
+
+    // 네트워크 이미지 다운로드 (PDF 렌더링용)
+    pw.MemoryImage? netImage;
+    if (defect.imageUrl != null && defect.imageUrl!.isNotEmpty) {
+      try {
+        final response = await Dio().get(defect.imageUrl!, options: Options(responseType: ResponseType.bytes));
+        netImage = pw.MemoryImage(response.data);
+      } catch (e) {
+        debugPrint('PDF 이미지 다운로드 실패: $e');
+      }
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('VISION AI - 구조 결함 상세 진단 보고서', style: pw.TextStyle(font: fontBold, fontSize: 18, color: PdfColor.fromHex('#2563EB'))),
+                  pw.Text(_dateOnly, style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 10)),
+                ]
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              
+              // 기본 정보
+              pw.Text('문서 정보', style: pw.TextStyle(font: fontBold, fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    _buildInfoRow('보고서 ID', 'DEF-${defect.defectId}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}'),
+                    _buildInfoRow('발행 일시', _now),
+                    _buildInfoRow('점검 일시', DateFormat('yyyy-MM-dd HH:mm:ss').format(defect.detectionTime)),
+                  ]
+                )
+              ),
+              pw.SizedBox(height: 20),
+
+              // 건물 및 위치 정보
+              pw.Text('탐지 위치 정보', style: pw.TextStyle(font: fontBold, fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    _buildInfoRow('건물 ID', '${defect.buildingId}'),
+                    if (buildingName != null) _buildInfoRow('건물명', buildingName),
+                    if (buildingLocation != null) _buildInfoRow('주소(위치)', buildingLocation),
+                    _buildInfoRow('탐지 기기 ID', '${defect.deviceId} (Jetson Nano)'),
+                  ]
+                )
+              ),
+              pw.SizedBox(height: 20),
+
+              // 결함 상세
+              pw.Text('결함 상세 정보', style: pw.TextStyle(font: fontBold, fontSize: 16)),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColor.fromHex(defect.statusCode == 'CRITICAL' ? '#FECACA' : '#E5E7EB')),
+                  color: PdfColor.fromHex(defect.statusCode == 'CRITICAL' ? '#FEF2F2' : '#FFFFFF'),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  children: [
+                    _buildInfoRow('결함 종류', defect.defectType),
+                    _buildInfoRow('AI 심각도', defect.severity ?? '미분류'),
+                    _buildInfoRow('상태 코드', defect.statusCode),
+                    if (defect.comment != null && defect.comment!.isNotEmpty)
+                      _buildInfoRow('작업자 코멘트', defect.comment!),
+                  ]
+                )
+              ),
+              pw.SizedBox(height: 20),
+              
+              // 이미지 렌더링
+              if (netImage != null) ...[
+                pw.Text('현장 탐지 이미지', style: pw.TextStyle(font: fontBold, fontSize: 16)),
+                pw.SizedBox(height: 10),
+                pw.Center(
+                  child: pw.ClipRRect(
+                    horizontalRadius: 8,
+                    verticalRadius: 8,
+                    child: pw.Image(netImage, height: 200, fit: pw.BoxFit.contain),
+                  )
+                ),
+              ],
+              
+              pw.Spacer(),
+              pw.Divider(),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                '본 보고서는 VISION AI 시스템에 의해 자동 생성되었습니다. 보고서 내용은 AI 분석 결과에 기반하며, 최종 판단은 전문가의 검토가 필요합니다.',
+                style: const pw.TextStyle(color: PdfColors.grey500, fontSize: 8),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: const Text('결함 진단 보고서', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A1D21))),
+            backgroundColor: const Color(0xFFF8F9FA),
+            iconTheme: const IconThemeData(color: Color(0xFF1A1D21)),
+            elevation: 0,
+            scrolledUnderElevation: 0,
+          ),
+          body: PdfPreview(
+            build: (format) => pdf.save(),
+            canChangeOrientation: false,
+            canChangePageFormat: false,
+            allowPrinting: true,
+            allowSharing: true,
+            pdfFileName: '결함진단보고서_${defect.defectType}_$_dateOnly.pdf',
+          ),
+        ),
+      ),
     );
   }
 

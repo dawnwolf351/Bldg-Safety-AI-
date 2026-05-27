@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:provider/provider.dart';
+import '../models/defect.dart';
+import '../models/building.dart';
+import '../viewmodels/building_viewmodel.dart';
+import '../services/report_service.dart';
 
 class InspectionDetailView extends StatefulWidget {
-  final Map<String, dynamic> inspectionData;
+  final Defect defect;
 
-  const InspectionDetailView({super.key, required this.inspectionData});
+  // 기존 호환성을 위한 named parameter (하위 호환)
+  final Map<String, dynamic>? inspectionData;
+
+  const InspectionDetailView({super.key, required this.defect, this.inspectionData});
 
   @override
   State<InspectionDetailView> createState() => _InspectionDetailViewState();
@@ -12,9 +22,17 @@ class InspectionDetailView extends StatefulWidget {
 class _InspectionDetailViewState extends State<InspectionDetailView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final Color _navyBase = const Color(0xFF0F172A);
-  final Color _navyCard = const Color(0xFF1E293B);
-  final Color _cyanAccent = const Color(0xFF06B6D4);
+  // 대시보드 및 진단 내역 화면과 통일된 프리미엄 화이트 테마 토큰
+  static const Color bgOffWhite = Color(0xFFF8F9FA);
+  static const Color cardWhite = Color(0xFFFFFFFF);
+  static const Color textCharcoal = Color(0xFF1A1D21);
+  static const Color textLightGrey = Color(0xFF6B7280);
+  static const Color borderLight = Color(0xFFE5E7EB);
+  static const Color brandingBlue = Color(0xFF2563EB);
+
+  final Color _redEmergency = const Color(0xFFFF3B30);
+  final Color _orangeWarning = const Color(0xFFFF9F0A);
+  final Color _greenSafe = const Color(0xFF34C759);
 
   @override
   void initState() {
@@ -30,198 +48,241 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
 
   @override
   Widget build(BuildContext context) {
-    bool isCritical = widget.inspectionData['status'] == 'CRITICAL';
-    Color statusColor = isCritical ? const Color(0xFFFF3B30) : (widget.inspectionData['status'] == 'WARNING' ? const Color(0xFFFF9F0A) : const Color(0xFF34C759));
+    final defect = widget.defect;
+    bool isCritical = defect.statusCode == 'CRITICAL';
+    bool isWarning = defect.statusCode == 'WARNING';
+    Color statusColor = isCritical ? _redEmergency : (isWarning ? _orangeWarning : _greenSafe);
+
+    // 날짜 포맷팅
+    String dateStr = '${defect.detectionTime.year}-${defect.detectionTime.month.toString().padLeft(2, '0')}-${defect.detectionTime.day.toString().padLeft(2, '0')} ${defect.detectionTime.hour.toString().padLeft(2, '0')}:${defect.detectionTime.minute.toString().padLeft(2, '0')}:${defect.detectionTime.second.toString().padLeft(2, '0')}';
 
     return Scaffold(
-      backgroundColor: _navyBase,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // 스크롤 시 앱바 영역으로 접히는 대형 썸네일 (Hero 적용)
-          SliverAppBar(
-            expandedHeight: 280,
-            pinned: true,
-            backgroundColor: _navyBase,
-            iconTheme: const IconThemeData(color: Colors.white),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 56, bottom: 16, right: 110), // 뒤로가기 및 원본 보기 버튼 겹침 방지 여백
-              title: Text(widget.inspectionData['title'], 
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 10)])
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Hero(
-                    tag: 'hero_image_${widget.inspectionData['title']}', // Hero 애니메이션 통일
-                    child: Image.network(
-                      widget.inspectionData['imageUrl'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.blueGrey[800],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 64),
-                      ),
-                    ),
-                  ),
-                  // 어두운 그라데이션 오버레이 (글씨 가독성 및 디자인 향상)
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, _navyBase.withValues(alpha: 0.9)],
-                        stops: const [0.5, 1.0],
-                      ),
-                    ),
-                  ),
-                  // 중앙 둥둥 떠있는 위험 테두리 타겟팅 효과 (CRITICAL 전용)
-                  if (isCritical)
+      backgroundColor: bgOffWhite,
+      // 깔끔한 투명 앱바
+      appBar: AppBar(
+        backgroundColor: bgOffWhite,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: textCharcoal, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          '상세 진단 정보',
+          style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. 대형 결함 이미지 또는 아이콘 영역
                     Center(
                       child: Container(
-                        width: 150, height: 100,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFFF3B30), width: 3),
-                          color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                          color: cardWhite,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              offset: const Offset(0, 4),
+                              blurRadius: 16,
+                            ),
+                          ],
+                          border: Border.all(color: borderLight),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: defect.imageUrl != null && defect.imageUrl!.isNotEmpty
+                              ? Hero(
+                                  tag: 'hero_image_${defect.defectId}',
+                                  child: Image.network(
+                                    defect.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Center(
+                                      child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 64),
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 72),
+                                ),
                         ),
                       ),
                     ),
-                  // 우측 하단 영상 재생/확대 뱃지 액션
-                  Positioned(
-                    bottom: 20, right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    const SizedBox(height: 20),
+
+                    // 2. 결함 제목
+                    Center(
+                      child: Text(
+                        defect.defectType,
+                        style: const TextStyle(
+                          color: textCharcoal,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                      child: const Row(
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 3. 상태 요약 큰 뱃지 (화이트 테마 매칭)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.25), width: 1.5),
+                      ),
+                      child: Row(
                         children: [
-                          Icon(Icons.zoom_in, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
-                          Text('원본 보기', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          Icon(isCritical ? Icons.warning_rounded : (isWarning ? Icons.info_outline : Icons.check_circle_outline), color: statusColor, size: 36),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  defect.statusCode,
+                                  style: TextStyle(color: statusColor, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'AI 소견: ${defect.defectType} | 심각도: ${defect.severity ?? "미분류"}',
+                                  style: const TextStyle(color: textCharcoal, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // 4. 3종 스펙 정보 탭 바 (화이트 테마 매칭)
+                    Container(
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: borderLight, width: 1.5)),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicatorColor: brandingBlue,
+                        indicatorWeight: 3,
+                        labelColor: brandingBlue,
+                        unselectedLabelColor: textLightGrey,
+                        dividerColor: Colors.transparent,
+                        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: -0.3),
+                        tabs: const [
+                          Tab(text: '세부 데이터'),
+                          Tab(text: '위치 정보'),
+                          Tab(text: '메모'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 5. 스펙 정보 탭 내용 (화이트 테마 매칭)
+                    SizedBox(
+                      height: 240,
+                      child: TabBarView(
+                        controller: _tabController,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          _buildDataTab(defect, dateStr),
+                          _buildLocationTab(defect),
+                          _buildCommentTab(defect),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 6. 하단 고정 액션 바 (화이트 테마 매칭)
+            Container(
+              decoration: BoxDecoration(
+                color: cardWhite,
+                border: const Border(top: BorderSide(color: borderLight, width: 1.0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    offset: const Offset(0, -4),
+                    blurRadius: 12,
                   ),
                 ],
               ),
-            ),
-          ),
-          
-          // 메인 하단 정보 패널 영역
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16).copyWith(
+                bottom: MediaQuery.of(context).padding.bottom + 16,
+              ),
+              child: Row(
                 children: [
-                  // 상태 요약 큰 뱃지
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        // 스낵바로 피드백
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('보고서를 생성하는 중입니다...', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue, duration: Duration(seconds: 1)),
+                        );
+                        
+                        // 건물 정보 가져오기 (보고서에 입력)
+                        final buildingViewModel = Provider.of<BuildingViewModel>(context, listen: false);
+                        final building = buildingViewModel.buildings.where((b) => b.id == defect.buildingId).firstOrNull;
+
+                        // 실제 보고서 생성 로직 호출
+                        await ReportService.generateDefectReport(
+                          context, 
+                          defect,
+                          buildingName: building?.buildingName,
+                          buildingLocation: building?.location,
+                        );
+                      },
+                      icon: const Icon(Icons.picture_as_pdf, size: 20),
+                      label: const Text('보고서 (PDF)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: brandingBlue,
+                        side: const BorderSide(color: brandingBlue, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(isCritical ? Icons.warning_rounded : Icons.info_outline, color: statusColor, size: 32),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(widget.inspectionData['status'], style: TextStyle(color: statusColor, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                              const SizedBox(height: 4),
-                              Text('AI 통합 소견: ${widget.inspectionData['subtitle']} (신뢰도 ${widget.inspectionData['confidence']})', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                            ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 1,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isCritical ? '긴급 출동 요청이 전송되었습니다.' : '조치 완료 마킹 처리가 완료되었습니다.', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            backgroundColor: isCritical ? _redEmergency : _greenSafe,
                           ),
-                        ),
-                      ],
+                        );
+                        Navigator.pop(context); // 이전 화면으로 복귀
+                      },
+                      icon: Icon(isCritical ? Icons.emergency : Icons.check_circle_outline, size: 20),
+                      label: Text(isCritical ? '긴급 출동 요청' : '조치 완료 마킹', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: statusColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  
-                  // 3종 스펙 정보 탭 바
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: _cyanAccent,
-                    labelColor: _cyanAccent,
-                    unselectedLabelColor: Colors.blueGrey[400],
-                    dividerColor: Colors.transparent,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    tabs: const [
-                      Tab(text: '세부 데이터'),
-                      Tab(text: '위치 정보'),
-                      Tab(text: '메모'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // 스펙 정보 탭 내용 (크기를 잡기 위해 SizedBox로 제한)
-                  SizedBox(
-                    height: 220,
-                    child: TabBarView(
-                      controller: _tabController,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        _buildDataTab(),
-                        _buildLocationTab(),
-                        _buildCommentTab(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 80), // 하단의 버튼들에 의한 가려짐 방지 여백
                 ],
-              ),
-            ),
-          )
-        ],
-      ),
-      
-      // 하단 고정 액션 바 (바텀 시트 형식)
-      bottomSheet: Container(
-        color: _navyBase,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16).copyWith(bottom: MediaQuery.of(context).padding.bottom + 16),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 1,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('보고서 다운로드를 에뮬레이션합니다.')));
-                },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('보고서 (PDF)'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _cyanAccent,
-                  side: BorderSide(color: _cyanAccent),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 1,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('조치 완료 또는 상부 보고 처리가 완료되었습니다.')));
-                  Navigator.pop(context); // 이전 화면으로 복귀
-                },
-                icon: const Icon(Icons.check_circle_outline),
-                label: Text(isCritical ? '긴급 출동 요청' : '조치 완료 마킹'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isCritical ? const Color(0xFFFF3B30) : const Color(0xFF34C759),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
               ),
             ),
           ],
@@ -231,22 +292,30 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
   }
 
   /* =========== 세부 데이터 탭 모듈 =========== */
-  Widget _buildDataTab() {
+  Widget _buildDataTab(Defect defect, String dateStr) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _navyCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.1)),
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            offset: const Offset(0, 4),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildDataRow('검사 일시', widget.inspectionData['date']),
-          _buildDataRow('결함 종류', '콘크리트 미세 균열, 표면 박리'),
-          _buildDataRow('결함 크기 추정', '길이 약 12~15cm, 폭 2mm 이내'),
-          _buildDataRow('카메라 촬영 고도', '지상 32.4m'),
-          _buildDataRow('진단 당시 기온', '섭씨 18도 / 건조'),
+          _buildDataRow('검사 일시', dateStr),
+          _buildDataRow('결함 종류', defect.defectType),
+          _buildDataRow('심각도', defect.severity ?? '미분류'),
+          _buildDataRow('연결 건물 ID', '${defect.buildingId}'),
+          _buildDataRow('탐지 기기 ID', '${defect.deviceId}'),
         ],
       ),
     );
@@ -259,56 +328,180 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.blueGrey[300], fontSize: 13)),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: textLightGrey, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(color: textCharcoal, fontSize: 13, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
+  Future<LatLng?> _fetchBuildingLocation(int buildingId) async {
+    try {
+      final buildingViewModel = Provider.of<BuildingViewModel>(context, listen: false);
+      if (buildingViewModel.buildings.isEmpty) {
+        await buildingViewModel.fetchBuildings();
+      }
+      
+      final Building? building = buildingViewModel.buildings.where((b) => b.id == buildingId).firstOrNull;
+      
+      if (building != null && building.location.isNotEmpty) {
+        List<Location> locations = await locationFromAddress(building.location);
+        if (locations.isNotEmpty) {
+          return LatLng(locations.first.latitude, locations.first.longitude);
+        }
+      }
+    } catch (e) {
+      debugPrint('위치 조회 오류: $e');
+    }
+    // 기본 위치 (건물이 없거나 오류 시 서울 중심)
+    return const LatLng(37.5665, 126.9780);
+  }
+
   /* =========== 위치 정보 탭 모듈 =========== */
-  Widget _buildLocationTab() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _navyCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 10),
-          Icon(Icons.map_outlined, color: Colors.blueGrey[400], size: 48),
-          const SizedBox(height: 16),
-          const Text('현재 데모(Dummy) 환경에서는 실시간 지도 뷰를 렌더링하지 않습니다.', style: TextStyle(color: Colors.white, fontSize: 13), textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text('GPS 좌표: 위도 37.524, 경도 127.038', style: TextStyle(color: _cyanAccent, fontSize: 12)),
-        ],
-      ),
+  Widget _buildLocationTab(Defect defect) {
+    return FutureBuilder<LatLng?>(
+      future: _fetchBuildingLocation(defect.buildingId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderLight),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(color: brandingBlue),
+            ),
+          );
+        }
+
+        final latLng = snapshot.data ?? const LatLng(37.5665, 126.9780);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.015),
+                offset: const Offset(0, 4),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: latLng,
+                    zoom: 16.0,
+                  ),
+                  markers: {
+                    Marker(
+                      markerId: MarkerId('building_${defect.buildingId}'),
+                      position: latLng,
+                      infoWindow: InfoWindow(
+                        title: '건물 ID: ${defect.buildingId}',
+                        snippet: '탐지 기기(Jetson): ${defect.deviceId}',
+                      ),
+                    ),
+                  },
+                  myLocationEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                ),
+                // 상단 안내 오버레이
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '건물 ID: ${defect.buildingId} 에서 탐지된 결함입니다.',
+                          style: const TextStyle(color: textCharcoal, fontSize: 13, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '탐지 기기(Jetson) ID: ${defect.deviceId}',
+                          style: const TextStyle(color: brandingBlue, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   /* =========== 작업자 코멘트 탭 모듈 =========== */
-  Widget _buildCommentTab() {
+  Widget _buildCommentTab(Defect defect) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _navyCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.1)),
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            offset: const Offset(0, 4),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 서버에 저장된 코멘트 표시
+          if (defect.comment != null && defect.comment!.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: brandingBlue.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: brandingBlue.withValues(alpha: 0.15)),
+              ),
+              child: Text(
+                defect.comment!,
+                style: const TextStyle(color: textCharcoal, fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           const Expanded(
             child: TextField(
-              maxLines: null, // 내용 많아지면 밑으로 확장
-              style: TextStyle(color: Colors.white, fontSize: 13),
+              maxLines: null,
+              style: TextStyle(color: textCharcoal, fontSize: 13),
               decoration: InputDecoration(
-                hintText: '작업 지시 사항이나 현장 코멘트를 남기세요 (서버와 동기화됨)...',
-                hintStyle: TextStyle(color: Colors.white30),
+                hintText: '추가 코멘트를 남기세요 (서버와 동기화됨)...',
+                hintStyle: TextStyle(color: textLightGrey, fontSize: 13),
                 border: InputBorder.none,
+                isDense: true,
               ),
             ),
           ),
@@ -316,13 +509,25 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('코멘트 저장 성공!')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('코멘트 저장 성공!', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
+                );
               },
-              child: Text('저장하기', style: TextStyle(color: _cyanAccent, fontWeight: FontWeight.bold)),
+              child: const Text('저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           )
         ],
       ),
     );
+  }
+
+  // 결함 타입에 따라 아이콘 반환
+  IconData _getDefectIcon(String defectType) {
+    final lower = defectType.toLowerCase();
+    if (lower.contains('화재') || lower.contains('fire')) return Icons.local_fire_department;
+    if (lower.contains('균열') || lower.contains('crack')) return Icons.broken_image;
+    if (lower.contains('박리') || lower.contains('spalling')) return Icons.layers;
+    if (lower.contains('부식') || lower.contains('corrosion')) return Icons.water_damage;
+    return Icons.warning_amber;
   }
 }
