@@ -6,7 +6,7 @@ import '../models/defect.dart';
 import '../models/building.dart';
 import '../viewmodels/building_viewmodel.dart';
 import '../services/report_service.dart';
-
+import 'package:audioplayers/audioplayers.dart';
 class InspectionDetailView extends StatefulWidget {
   final Defect defect;
 
@@ -263,16 +263,20 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                     flex: 1,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(isCritical ? '긴급 출동 요청이 전송되었습니다.' : '조치 완료 마킹 처리가 완료되었습니다.', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            backgroundColor: isCritical ? _redEmergency : _greenSafe,
-                          ),
-                        );
-                        Navigator.pop(context); // 이전 화면으로 복귀
+                        if (isCritical) {
+                          _showEmergencyAlertPopup(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('조치 완료 마킹 처리가 완료되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
+                              backgroundColor: _greenSafe,
+                            ),
+                          );
+                          Navigator.pop(context); // 이전 화면으로 복귀
+                        }
                       },
-                      icon: Icon(isCritical ? Icons.emergency : Icons.check_circle_outline, size: 20),
-                      label: Text(isCritical ? '긴급 출동 요청' : '조치 완료 마킹', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      icon: Icon(isCritical ? Icons.notifications_active : Icons.check_circle_outline, size: 20),
+                      label: Text(isCritical ? '긴급 알림 띄우기' : '조치 완료 마킹', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: statusColor,
                         foregroundColor: Colors.white,
@@ -287,6 +291,57 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEmergencyAlertPopup(BuildContext context) async {
+    final player = AudioPlayer();
+    
+    // 삐용삐용 사이렌 소리 재생 (반복 설정)
+    await player.setReleaseMode(ReleaseMode.loop);
+    await player.play(AssetSource('siren.wav'));
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent, // 화이트 테마 깔끔하게
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: borderLight, width: 1),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: _redEmergency),
+            const SizedBox(width: 8),
+            const Text('긴급 위험 감지', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          '현장 시스템에 심각한 이상이 감지되었습니다.\n모든 관리자에게 알림이 전송되며, 즉각적인 현장 대피 및 보수 지시가 필요합니다.',
+          style: TextStyle(color: textLightGrey, height: 1.5, fontSize: 13),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () async {
+              await player.stop();
+              await player.dispose();
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              Navigator.pop(context); // 이전 화면으로 복귀
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _redEmergency,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text('알림 종료 및 확인', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
