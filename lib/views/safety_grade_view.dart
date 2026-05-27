@@ -117,9 +117,10 @@ class SafetyGradeView extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // 좌측 등급 색상 바
             Container(
               width: 80,
@@ -183,10 +184,11 @@ class SafetyGradeView extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
+            ), // Expanded
+          ], // children
+        ), // Row
+       ), // IntrinsicHeight
+      ), // ClipRRect
+    ); // Container
   }
 }
