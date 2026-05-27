@@ -34,7 +34,7 @@ def create_app():
         extensions.redis_client.ping()
         print("[시스템] Redis 연결 성공")
     except redis.ConnectionError:
-        print("[경고] Redis 연결 실패 — 토큰 블랙리스트 기능이 비활성화됩니다.")
+        print("[경고] Redis 연결 실패 - 토큰 블랙리스트 기능이 비활성화됩니다.")
         extensions.redis_client = None
 
     # 네임스페이스 등록
@@ -67,7 +67,10 @@ def create_app():
         print(f"--- [REQUEST] {request.method} {request.url} ---")
         print(f"Headers: {dict(request.headers)}")
         if request.is_json:
-            print(f"Body: {request.get_json()}")
+            # silent=True를 설정하여 바디가 비어있어도 400 에러를 던지지 않도록 수정
+            body = request.get_json(silent=True)
+            if body:
+                print(f"Body: {body}")
         print("---------------------------------------")
 
     return app
