@@ -55,12 +55,17 @@ class Defect {
 
   /// 심각도를 앱 UI 상태 문자열로 변환 (CRITICAL / WARNING / SAFE)
   String get statusCode {
-    switch (severity) {
+    switch (severity?.toUpperCase()) {
       case '심각':
+      case 'E':
+      case 'D':
         return 'CRITICAL';
       case '주의':
+      case 'C':
         return 'WARNING';
       case '경미':
+      case 'B':
+      case 'A':
       default:
         return 'SAFE';
     }
@@ -68,12 +73,17 @@ class Defect {
 
   /// 심각도를 한글 레이블로 변환
   String get statusLabel {
-    switch (severity) {
+    switch (severity?.toUpperCase()) {
       case '심각':
+      case 'E':
+      case 'D':
         return '위험 감지';
       case '주의':
+      case 'C':
         return '주의 필요';
       case '경미':
+      case 'B':
+      case 'A':
       default:
         return '안전(정상)';
     }
