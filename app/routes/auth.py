@@ -10,7 +10,7 @@ import traceback
 # API 네임스페이스 정의 (기존 Blueprint 역할)
 auth_ns = Namespace('auth', description='인증 관련 API')
 
-# --- [Swagger 데이터 모델 정의 - backend 스타일] ---
+# --- [Swagger 데이터 모델 정의 ] ---
 
 # 1. 사용자 정보 모델 (기본)
 user_model = auth_ns.model('UserResponse', {
@@ -125,7 +125,7 @@ class LoginResource(Resource):
             data = request.get_json(silent=True)
             if not data:
                 return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
-            email = data.get('email')
+            email = data.get('email') or data.get('username')  # email 또는 username 둘 다 허용
             password = data.get('password')
 
             result, error = AuthService.login(email, password)

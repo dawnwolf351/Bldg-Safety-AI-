@@ -1,5 +1,5 @@
 from datetime import datetime
-from app import db  # Flask-SQLAlchemy 인스턴스
+from app.extensions import db
 
 
 # ==========================================

@@ -17,13 +17,6 @@ class JetsonDevice(db.Model):
     # users 테이블의 id를 참조 (관리자가 먼저 등록할 수 있으므로 nullable=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
-    # 🌟 [추가된 부분] 장비 상태(DeviceState) 테이블과의 1:N 관계 설정!
-    # cascade="all, delete-orphan" 속성 덕분에, 이 기기가 삭제되면 관련 상태 로그들도 DB에서 깔끔하게 연쇄 삭제됩니다.
-    state_logs = db.relationship('DeviceState', backref='device', lazy=True, cascade="all, delete-orphan")
-    
-    # 장비가 탐지한 결함(Defect)과의 1:N 관계 설정
-    defects = db.relationship('Defect', backref='device', lazy=True, cascade="all, delete-orphan")
-
     def to_dict(self):
         return {
             "device_id": self.device_id,

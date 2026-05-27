@@ -17,14 +17,6 @@ class User(db.Model):
     # 내가 담당하는 Jetson 기기 목록과의 연결
     devices = db.relationship('JetsonDevice', backref='owner', lazy=True)
 
-    def __init__(self, email, password_hash, name, role_id, created_at=None):
-        self.email = email
-        self.password_hash = password_hash
-        self.name = name
-        self.role_id = role_id
-        if created_at is not None:
-            self.created_at = created_at
-
     def to_dict(self):
         return {
             "id": self.id,
