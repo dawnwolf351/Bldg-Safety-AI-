@@ -366,11 +366,11 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                         initialValue: selectedSeverity,
                         decoration: _inputDecoration(null),
                         items: const [
-                          DropdownMenuItem(value: 'A', child: Text('A (우수 / 안전)')),
+                          DropdownMenuItem(value: 'A', child: Text('A (우수 / 매우 안전)')),
                           DropdownMenuItem(value: 'B', child: Text('B (양호 / 안전)')),
                           DropdownMenuItem(value: 'C', child: Text('C (보통 / 주의)')),
                           DropdownMenuItem(value: 'D', child: Text('D (미흡 / 위험)')),
-                          DropdownMenuItem(value: 'E', child: Text('E (불량 / 위험)')),
+                          DropdownMenuItem(value: 'E', child: Text('E (불량 / 매우 위험)')),
                         ],
                         onChanged: (v) {
                           if (v != null) dialogSetState(() => selectedSeverity = v);
