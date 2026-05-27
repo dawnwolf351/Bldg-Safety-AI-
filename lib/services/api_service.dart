@@ -619,6 +619,22 @@ class ApiService {
     }
   }
 
+  // 16-1. 결함 메모(comment) 수정 (PATCH /api/defects/<id>)
+  Future<bool> updateDefectComment(int defectId, String comment) async {
+    debugPrint('📝 [결함 메모 수정] ID: $defectId, 코멘트: $comment');
+    try {
+      final response = await _dio.patch(
+        '/api/defects/$defectId',
+        data: {'comment': comment},
+      );
+      debugPrint('✅ [결함 메모 수정] 상태코드: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP updateDefectComment Error: $e');
+      return false;
+    }
+  }
+
   // ==========================================
 
   // [Jetson 기기 상태(DeviceState) API]

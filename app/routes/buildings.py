@@ -212,3 +212,23 @@ class DefectDetail(Resource):
         db.session.delete(defect)
         db.session.commit()
         return {"message": f"결함(ID: {defect_id})이 삭제되었습니다."}, HTTPStatus.OK
+
+    @defect_ns.doc(
+        description='결함의 메모(comment)를 수정합니다.',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def patch(self, current_user, defect_id):
+        """결함 메모 수정"""
+        defect = Defect.query.get_or_404(defect_id)
+        data = request.get_json()
+        if not data:
+            return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
+
+        if 'comment' in data:
+            defect.comment = data['comment']
+            db.session.commit()
+            return {'message': '메모가 저장되었습니다.', 'defect': defect.to_dict()}, HTTPStatus.OK
+        else:
+            return {"error": "수정할 comment 필드가 없습니다."}, HTTPStatus.BAD_REQUEST
+

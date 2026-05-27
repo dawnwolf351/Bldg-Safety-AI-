@@ -138,4 +138,19 @@ class InspectionViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  // 기존 결함 코멘트 수정 후 모델 즉시 갱신
+  Future<bool> updateDefectComment(int defectId, String newComment) async {
+    final success = await ApiService().updateDefectComment(defectId, newComment);
+    if (success) {
+      // 로컬 메모리 목록에서도 해당 항목 찾아 코멘트 갱신
+      final idx = _defects.indexWhere((d) => d.defectId == defectId);
+      if (idx != -1) {
+        _defects[idx] = _defects[idx].copyWith(comment: newComment);
+        notifyListeners();
+      }
+      return true;
+    }
+    return false;
+  }
 }

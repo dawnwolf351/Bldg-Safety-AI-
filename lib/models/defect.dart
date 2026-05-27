@@ -23,6 +23,28 @@ class Defect {
     required this.detectionTime,
   });
 
+  Defect copyWith({
+    int? defectId,
+    int? buildingId,
+    int? deviceId,
+    String? defectType,
+    String? severity,
+    String? imageUrl,
+    String? comment,
+    DateTime? detectionTime,
+  }) {
+    return Defect(
+      defectId: defectId ?? this.defectId,
+      buildingId: buildingId ?? this.buildingId,
+      deviceId: deviceId ?? this.deviceId,
+      defectType: defectType ?? this.defectType,
+      severity: severity ?? this.severity,
+      imageUrl: imageUrl ?? this.imageUrl,
+      comment: comment ?? this.comment,
+      detectionTime: detectionTime ?? this.detectionTime,
+    );
+  }
+
   /// 백엔드 JSON → Defect 객체 변환
   factory Defect.fromJson(Map<String, dynamic> json) {
     return Defect(

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/defect.dart';
 import '../models/building.dart';
 import '../viewmodels/building_viewmodel.dart';
+import '../viewmodels/inspection_viewmodel.dart';
 import '../services/report_service.dart';
 import '../utils/alert_utils.dart';
 
@@ -22,6 +23,7 @@ class InspectionDetailView extends StatefulWidget {
 
 class _InspectionDetailViewState extends State<InspectionDetailView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late TextEditingController _commentCtrl;
 
   // 대시보드 및 진단 내역 화면과 통일된 프리미엄 화이트 테마 토큰
   static const Color bgOffWhite = Color(0xFFF8F9FA);
@@ -39,11 +41,13 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _commentCtrl = TextEditingController(text: widget.defect.comment ?? '');
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _commentCtrl.dispose();
     super.dispose();
   }
 
@@ -482,29 +486,13 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 서버에 저장된 코멘트 표시
-          if (defect.comment != null && defect.comment!.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: brandingBlue.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: brandingBlue.withValues(alpha: 0.15)),
-              ),
-              child: Text(
-                defect.comment!,
-                style: const TextStyle(color: textCharcoal, fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          const Expanded(
+          Expanded(
             child: TextField(
+              controller: _commentCtrl,
               maxLines: null,
-              style: TextStyle(color: textCharcoal, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: '추가 코멘트를 남기세요 (서버와 동기화됨)...',
+              style: const TextStyle(color: textCharcoal, fontSize: 13, height: 1.5),
+              decoration: const InputDecoration(
+                hintText: '작업자 코멘트나 메모를 자유롭게 남기세요 (서버와 동기화됨)...',
                 hintStyle: TextStyle(color: textLightGrey, fontSize: 13),
                 border: InputBorder.none,
                 isDense: true,
@@ -514,12 +502,30 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('코멘트 저장 성공!', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
+              onPressed: () async {
+                final newComment = _commentCtrl.text.trim();
+                
+                final messenger = ScaffoldMessenger.of(context);
+                final vm = Provider.of<InspectionViewModel>(context, listen: false);
+                
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('메모를 저장 중입니다...'), duration: Duration(milliseconds: 500)),
                 );
+
+                final success = await vm.updateDefectComment(defect.defectId, newComment);
+                if (!mounted) return;
+
+                if (success) {
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('메모가 서버에 성공적으로 저장되었습니다! ✅', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
+                  );
+                } else {
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('메모 저장에 실패했습니다. ❌', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: Colors.red),
+                  );
+                }
               },
-              child: const Text('저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+              child: const Text('DB에 저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           )
         ],
