@@ -6,6 +6,9 @@ import 'package:capstone_project_ui/views/inspection_detail_view.dart';
 import '../viewmodels/inspection_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../models/defect.dart';
+import '../models/building.dart';
+import '../models/device.dart';
+import '../services/api_service.dart';
 
 class InspectionHistoryView extends StatefulWidget {
   const InspectionHistoryView({super.key});
@@ -186,13 +189,43 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
 
   // 결함 탐지 추가 다이얼로그
   Future<void> _showAddDefectDialog() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: brandingBlue)),
+    );
+
+    List<Building> buildings = [];
+    List<Device> devices = [];
+    try {
+      buildings = await ApiService().getBuildings();
+      devices = await ApiService().getJetsonDevices();
+    } catch (e) {
+      debugPrint('빌딩/기기 목록 로드 실패: $e');
+    }
+
+    navigator.pop(); // 로딩 닫기
+
+    if (buildings.isEmpty || devices.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('등록된 건물 또는 기기가 없습니다. 먼저 등록해주세요.')),
+      );
+      return;
+    }
+
     _pickedImageFile = null;
     final formKey = GlobalKey<FormState>();
     final defectTypeCtrl = TextEditingController();
-    final buildingIdCtrl = TextEditingController();
-    final deviceIdCtrl = TextEditingController();
     final commentCtrl = TextEditingController();
+    
+    int selectedBuildingId = buildings.first.id;
+    int selectedDeviceId = devices.first.id;
     String selectedSeverity = '경미';
+
+    if (!mounted) return;
 
     await showDialog(
       context: context,
@@ -280,25 +313,39 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 건물 ID
-                      _buildFormLabel('건물 ID'),
+                      // 건물 선택 드롭다운
+                      _buildFormLabel('건물 선택'),
                       const SizedBox(height: 6),
-                      TextFormField(
-                        controller: buildingIdCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: _inputDecoration('건물 고유 ID를 입력하세요 (예: 1)'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? '건물 ID를 입력해 주세요' : null,
+                      DropdownButtonFormField<int>(
+                        initialValue: selectedBuildingId,
+                        decoration: _inputDecoration(null),
+                        items: buildings.map((b) {
+                          return DropdownMenuItem<int>(
+                            value: b.id,
+                            child: Text('${b.buildingName} (ID: ${b.id})'),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v != null) dialogSetState(() => selectedBuildingId = v);
+                        },
                       ),
                       const SizedBox(height: 12),
 
-                      // 기기 ID
-                      _buildFormLabel('기기 ID'),
+                      // 기기 선택 드롭다운
+                      _buildFormLabel('기기 선택'),
                       const SizedBox(height: 6),
-                      TextFormField(
-                        controller: deviceIdCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: _inputDecoration('Jetson 기기 ID를 입력하세요 (예: 1)'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? '기기 ID를 입력해 주세요' : null,
+                      DropdownButtonFormField<int>(
+                        initialValue: selectedDeviceId,
+                        decoration: _inputDecoration(null),
+                        items: devices.map((d) {
+                          return DropdownMenuItem<int>(
+                            value: d.id,
+                            child: Text('${d.deviceName} (ID: ${d.id})'),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v != null) dialogSetState(() => selectedDeviceId = v);
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -363,8 +410,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                                 final vm = Provider.of<InspectionViewModel>(context, listen: false);
                                 final messenger = ScaffoldMessenger.of(context);
                                 final ok = await vm.addDefect(
-                                  buildingId: int.tryParse(buildingIdCtrl.text.trim()) ?? 0,
-                                  deviceId: int.tryParse(deviceIdCtrl.text.trim()) ?? 0,
+                                  buildingId: selectedBuildingId,
+                                  deviceId: selectedDeviceId,
                                   defectType: defectTypeCtrl.text.trim(),
                                   severity: selectedSeverity,
                                   comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
