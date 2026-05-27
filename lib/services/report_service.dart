@@ -19,77 +19,88 @@ class ReportService {
 
   /// PDF 보고서를 생성하고 미리보기 화면을 띄움
   static Future<void> generateAndPreview(BuildContext context, List<Device> devices) async {
-    // 실제 데이터 연동 (Building & Inspection ViewModel 활용)
-    final buildingVM = Provider.of<BuildingViewModel>(context, listen: false);
-    final inspectionVM = Provider.of<InspectionViewModel>(context, listen: false);
+    try {
+      // 실제 데이터 연동 (Building & Inspection ViewModel 활용)
+      final buildingVM = Provider.of<BuildingViewModel>(context, listen: false);
+      final inspectionVM = Provider.of<InspectionViewModel>(context, listen: false);
 
-    // 데이터가 비어있다면 최신화
-    if (buildingVM.buildings.isEmpty) await buildingVM.fetchBuildings();
-    if (inspectionVM.defects.isEmpty) await inspectionVM.fetchDefects();
+      // 데이터가 비어있다면 최신화
+      if (buildingVM.buildings.isEmpty) await buildingVM.fetchBuildings();
+      if (inspectionVM.defects.isEmpty) await inspectionVM.fetchDefects();
 
-    final buildings = buildingVM.buildings;
-    final defects = inspectionVM.defects;
+      final buildings = buildingVM.buildings;
+      final defects = inspectionVM.defects;
 
-    // PDF 문서 생성
-    final pdf = pw.Document();
+      // PDF 문서 생성
+      final pdf = pw.Document();
 
-    // 한글 폰트 로드 (Noto Sans KR)
-    final font = await PdfGoogleFonts.notoSansKRRegular();
-    final fontBold = await PdfGoogleFonts.notoSansKRBold();
+      // 한글 폰트 로드 (Noto Sans KR)
+      final font = await PdfGoogleFonts.notoSansKRRegular();
+      final fontBold = await PdfGoogleFonts.notoSansKRBold();
 
-    // 페이지 1: 표지 + 요약
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
-        build: (context) => _buildCoverPage(context, devices, fontBold),
-      ),
-    );
+      // 페이지 1: 표지 + 요약
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+          build: (context) => _buildCoverPage(context, devices, fontBold),
+        ),
+      );
 
-    // 페이지 2: 장치별 상세 보고
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
-        header: (context) => _buildPageHeader(context),
-        footer: (context) => _buildPageFooter(context),
-        build: (context) => _buildDeviceDetailPages(context, devices, defects),
-      ),
-    );
+      // 페이지 2: 장치별 상세 보고
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+          header: (context) => _buildPageHeader(context),
+          footer: (context) => _buildPageFooter(context),
+          build: (context) => _buildDeviceDetailPages(context, devices, defects),
+        ),
+      );
 
-    // 페이지 3: 구조물 안전 점검 요약
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
-        header: (context) => _buildPageHeader(context),
-        footer: (context) => _buildPageFooter(context),
-        build: (context) => _buildStructureSummaryPage(context, buildings, defects),
-      ),
-    );
+      // 페이지 3: 구조물 안전 점검 요약
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+          header: (context) => _buildPageHeader(context),
+          footer: (context) => _buildPageFooter(context),
+          build: (context) => _buildStructureSummaryPage(context, buildings, defects),
+        ),
+      );
 
-    // PDF 미리보기 및 저장 화면 표시
-    if (!context.mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(
-            title: const Text('AI 안전 진단 보고서', style: TextStyle(fontWeight: FontWeight.bold)),
-            backgroundColor: const Color(0xFF0F172A),
-            foregroundColor: Colors.white,
-          ),
-          body: PdfPreview(
-            build: (format) => pdf.save(),
-            canChangeOrientation: false,
-            canChangePageFormat: false,
-            allowPrinting: true,
-            allowSharing: true,
-            pdfFileName: 'AI_안전진단_보고서_$_dateOnly.pdf',
+      // PDF 미리보기 및 저장 화면 표시
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: const Text('AI 안전 진단 보고서', style: TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+            ),
+            body: PdfPreview(
+              build: (format) => pdf.save(),
+              canChangeOrientation: false,
+              canChangePageFormat: false,
+              allowPrinting: true,
+              allowSharing: true,
+              pdfFileName: 'AI_안전진단_보고서_$_dateOnly.pdf',
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e, stack) {
+      debugPrint('🚨 PDF 생성 중 치명적 오류 발생: $e\n$stack');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF 보고서 생성 실패: $e', style: const TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFFFF3B30),
+        ),
+      );
+    }
   }
 
   // ============== 표지 페이지 ==============
@@ -175,6 +186,10 @@ class ReportService {
       final device = devices[i];
       // 이 기기와 관련된 결함만 필터링
       final deviceDefects = allDefects.where((d) => d.deviceId == device.id).toList();
+      
+      // PDF 레이아웃 깨짐(Unbounded / No room) 방지를 위해 최대 5건까지만 요약 노출하고 더보기 링크 제공
+      final displayDefects = deviceDefects.take(5).toList();
+      final hasMore = deviceDefects.length > 5;
 
       widgets.add(
         pw.Container(
@@ -213,9 +228,16 @@ class ReportService {
               pw.Text('위치: ${device.location}  |  MAC: ${device.macAddress}', style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 9)),
               pw.SizedBox(height: 12),
               // 분석 결과
-              pw.Text('AI 분석 결과', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+              pw.Text('AI 분석 결과 (최대 5건 표시)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
               pw.SizedBox(height: 8),
-              _buildAnalysisTable(deviceDefects),
+              _buildAnalysisTable(displayDefects),
+              if (hasMore) ...[
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  '* 외 ${deviceDefects.length - 5}건의 진단 이력이 더 존재합니다. 전체 상세 이력은 모니터링 시스템을 참고하십시오.',
+                  style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 8),
+                ),
+              ],
             ],
           ),
         ),
