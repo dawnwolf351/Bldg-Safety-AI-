@@ -525,7 +525,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                   );
                 }
               },
-              child: const Text('DB에 저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+              child: const Text('저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           )
         ],
