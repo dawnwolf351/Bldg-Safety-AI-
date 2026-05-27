@@ -24,9 +24,9 @@ class ReportService {
       final buildingVM = Provider.of<BuildingViewModel>(context, listen: false);
       final inspectionVM = Provider.of<InspectionViewModel>(context, listen: false);
 
-      // 데이터가 비어있다면 최신화
-      if (buildingVM.buildings.isEmpty) await buildingVM.fetchBuildings();
-      if (inspectionVM.defects.isEmpty) await inspectionVM.fetchDefects();
+      // PDF 생성 시점의 가장 최신 실시간 DB 데이터를 강제로 동기화하여 보고서에 반영
+      await buildingVM.fetchBuildings();
+      await inspectionVM.fetchDefects();
 
       final buildings = buildingVM.buildings;
       final defects = inspectionVM.defects;
