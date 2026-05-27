@@ -575,7 +575,52 @@ class ApiService {
     }
   }
 
+  // 17-A. 결함 등록 (POST /api/defects/) - 관리자 레벨 2 이상
+  // 이미지 파일이 있으면 multipart/form-data, 없으면 JSON으로 전송
+  Future<bool> createDefect({
+    required int buildingId,
+    required int deviceId,
+    required String defectType,
+    String? severity,
+    String? comment,
+    String? imageFilePath,
+  }) async {
+    debugPrint('📸 [결함 등록] 새 결함 등록 요청');
+    try {
+      if (imageFilePath != null && imageFilePath.isNotEmpty) {
+        // 이미지 있는 경우 multipart/form-data 전송
+        final formData = FormData.fromMap({
+          'building_id': buildingId,
+          'device_id': deviceId,
+          'defect_type': defectType,
+          if (severity != null) 'severity': severity,
+          if (comment != null) 'comment': comment,
+          'image': await MultipartFile.fromFile(imageFilePath, filename: imageFilePath.split('/').last),
+        });
+        final response = await _dio.post('/api/defects/', data: formData);
+        debugPrint('✅ [결함 등록] 이미지 포함 상태코드: ${response.statusCode}');
+        return response.statusCode == 200 || response.statusCode == 201;
+      } else {
+        // 이미지 없는 경우 JSON 전송
+        final data = {
+          'building_id': buildingId,
+          'device_id': deviceId,
+          'defect_type': defectType,
+          if (severity != null) 'severity': severity,
+          if (comment != null) 'comment': comment,
+        };
+        final response = await _dio.post('/api/defects/', data: data);
+        debugPrint('✅ [결함 등록] JSON 상태코드: ${response.statusCode}');
+        return response.statusCode == 200 || response.statusCode == 201;
+      }
+    } catch (e) {
+      debugPrint('🚨 HTTP createDefect Error: $e');
+      return false;
+    }
+  }
+
   // ==========================================
+
   // [Jetson 기기 상태(DeviceState) API]
   // 백엔드 Swagger: GET /api/devices/<device_id>/state
   // ==========================================

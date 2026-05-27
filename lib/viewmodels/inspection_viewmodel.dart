@@ -111,4 +111,31 @@ class InspectionViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  // 새 결함 탐지 이력 등록 후 성공 시 목록 자동 새로고침
+  Future<bool> addDefect({
+    required int buildingId,
+    required int deviceId,
+    required String defectType,
+    String? severity,
+    String? comment,
+    String? imageFilePath,
+  }) async {
+    final success = await ApiService().createDefect(
+      buildingId: buildingId,
+      deviceId: deviceId,
+      defectType: defectType,
+      severity: severity,
+      comment: comment,
+      imageFilePath: imageFilePath,
+    );
+    if (success) {
+      await fetchDefects(); // 등록 성공 시 목록 자동 새로고침
+      return true;
+    } else {
+      _errorMessage = '결함 이력을 등록하는데 실패했습니다.';
+      notifyListeners();
+      return false;
+    }
+  }
 }

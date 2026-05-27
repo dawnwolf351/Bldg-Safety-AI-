@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:capstone_project_ui/views/inspection_detail_view.dart';
 import '../viewmodels/inspection_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -20,6 +22,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     {'label': '주의', 'color': const Color(0xFFFF9F0A)},
     {'label': '양호', 'color': const Color(0xFF34C759)},
   ];
+  File? _pickedImageFile; // 결함 등록 다이얼로그에서 선택된 이미지
 
   // 화이트 테마 디자인 토큰 (대시보드와 통일)
   static const Color bgOffWhite = Color(0xFFF8F9FA);
@@ -105,14 +108,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     );
   }
 
-  // 상단 헤더 (화이트 테마)
+  // 상단 헤더 (화이트 테마) - 관리자 권한일 때 [+ 결함 추가] 버튼 노출
   Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
+    final bool canAdd = userRole == 'admin' || userRole == 'super_admin';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.assignment_outlined, color: brandingBlue, size: 28),
               SizedBox(width: 8),
@@ -122,8 +127,299 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
               ),
             ],
           ),
+          if (canAdd)
+            ElevatedButton.icon(
+              onPressed: () => _showAddDefectDialog(),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('결함 추가', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: brandingBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  // 이미지 선택 (갤러리 / 카메라 선택 다이얼로그)
+  Future<void> _pickImage(StateSetter dialogSetState) async {
+    final picker = ImagePicker();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFEEF2FF), child: Icon(Icons.photo_library_outlined, color: brandingBlue)),
+              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                if (picked != null) dialogSetState(() => _pickedImageFile = File(picked.path));
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFFFF0F0), child: Icon(Icons.camera_alt_outlined, color: Colors.redAccent)),
+              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                if (picked != null) dialogSetState(() => _pickedImageFile = File(picked.path));
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 결함 탐지 추가 다이얼로그
+  Future<void> _showAddDefectDialog() async {
+    _pickedImageFile = null;
+    final formKey = GlobalKey<FormState>();
+    final defectTypeCtrl = TextEditingController();
+    final buildingIdCtrl = TextEditingController();
+    final deviceIdCtrl = TextEditingController();
+    final commentCtrl = TextEditingController();
+    String selectedSeverity = '경미';
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, dialogSetState) {
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 헤더
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.add_photo_alternate_outlined, color: brandingBlue, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('결함 탐지 등록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textCharcoal)),
+                              Text('새 결함 이력을 DB에 저장합니다', style: TextStyle(fontSize: 12, color: textLightGrey)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(height: 1, color: borderLight),
+                      const SizedBox(height: 20),
+
+                      // 이미지 업로드 영역
+                      GestureDetector(
+                        onTap: () => _pickImage(dialogSetState),
+                        child: Container(
+                          height: 160,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFF),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _pickedImageFile != null ? brandingBlue : borderLight, width: 1.5),
+                          ),
+                          child: _pickedImageFile != null
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(13),
+                                      child: Image.file(_pickedImageFile!, fit: BoxFit.cover),
+                                    ),
+                                    Positioned(
+                                      top: 8, right: 8,
+                                      child: GestureDetector(
+                                        onTap: () => dialogSetState(() => _pickedImageFile = null),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined, color: brandingBlue.withValues(alpha: 0.5), size: 40),
+                                    const SizedBox(height: 8),
+                                    const Text('사진 첨부 (선택)', style: TextStyle(color: textLightGrey, fontSize: 13)),
+                                    const SizedBox(height: 4),
+                                    Text('갤러리 또는 카메라', style: TextStyle(color: brandingBlue.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 건물 ID
+                      _buildFormLabel('건물 ID'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: buildingIdCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDecoration('건물 고유 ID를 입력하세요 (예: 1)'),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? '건물 ID를 입력해 주세요' : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 기기 ID
+                      _buildFormLabel('기기 ID'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: deviceIdCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDecoration('Jetson 기기 ID를 입력하세요 (예: 1)'),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? '기기 ID를 입력해 주세요' : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 결함 유형
+                      _buildFormLabel('결함 유형'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: defectTypeCtrl,
+                        decoration: _inputDecoration('예: 균열, 화재, 박리, 침수 등'),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? '결함 유형을 입력해 주세요' : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 심각도 드롭다운
+                      _buildFormLabel('심각도'),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedSeverity,
+                        decoration: _inputDecoration(null),
+                        items: const [
+                          DropdownMenuItem(value: '경미', child: Text('경미 (양호)')),
+                          DropdownMenuItem(value: '주의', child: Text('주의 (경고)')),
+                          DropdownMenuItem(value: '심각', child: Text('심각 (위험)')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) dialogSetState(() => selectedSeverity = v);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 상세 설명
+                      _buildFormLabel('상세 설명 (선택)'),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: commentCtrl,
+                        maxLines: 3,
+                        decoration: _inputDecoration('현장 상황을 간략히 설명해 주세요'),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // 버튼 영역
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: const BorderSide(color: borderLight),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('취소', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (!formKey.currentState!.validate()) return;
+                                Navigator.pop(ctx);
+                                final vm = Provider.of<InspectionViewModel>(context, listen: false);
+                                final messenger = ScaffoldMessenger.of(context);
+                                final ok = await vm.addDefect(
+                                  buildingId: int.tryParse(buildingIdCtrl.text.trim()) ?? 0,
+                                  deviceId: int.tryParse(deviceIdCtrl.text.trim()) ?? 0,
+                                  defectType: defectTypeCtrl.text.trim(),
+                                  severity: selectedSeverity,
+                                  comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
+                                  imageFilePath: _pickedImageFile?.path,
+                                );
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(ok ? '✅ 결함 탐지 이력이 성공적으로 등록되었습니다.' : '❌ 결함 등록에 실패했습니다. 다시 시도해 주세요.'),
+                                    backgroundColor: ok ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: brandingBlue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                              child: const Text('결함 등록', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // 폼 라벨 공통 위젯
+  Widget _buildFormLabel(String label) {
+    return Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textCharcoal));
+  }
+
+  // 입력 필드 공통 스타일
+  InputDecoration _inputDecoration(String? hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: textLightGrey, fontSize: 13),
+      filled: true,
+      fillColor: const Color(0xFFF8F9FA),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderLight)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderLight)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: brandingBlue, width: 1.5)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFF3B30))),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 1.5)),
     );
   }
 
