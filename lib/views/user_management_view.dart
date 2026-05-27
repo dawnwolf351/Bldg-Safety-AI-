@@ -48,7 +48,6 @@ class _UserManagementViewState extends State<UserManagementView> {
                     items: const [
                       DropdownMenuItem(value: 'ROLE_USER', child: Text('일반 사용자 (ROLE_USER)')),
                       DropdownMenuItem(value: 'ROLE_ADMIN', child: Text('관리자 (ROLE_ADMIN)')),
-                      DropdownMenuItem(value: 'ROLE_SUPERADMIN', child: Text('최고 관리자 (ROLE_SUPERADMIN)')),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => selectedRole = val);
@@ -171,7 +170,6 @@ class _UserManagementViewState extends State<UserManagementView> {
                       items: const [
                         DropdownMenuItem(value: 'ROLE_USER', child: Text('일반 사용자 (ROLE_USER)')),
                         DropdownMenuItem(value: 'ROLE_ADMIN', child: Text('관리자 (ROLE_ADMIN)')),
-                        DropdownMenuItem(value: 'ROLE_SUPERADMIN', child: Text('최고 관리자 (ROLE_SUPERADMIN)')),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => selectedRole = val);
