@@ -38,6 +38,7 @@ dependencies:
   # 구글 지도 및 지오코딩 (위경도 변환)
   google_maps_flutter: ^2.5.3
   geocoding: ^3.0.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:

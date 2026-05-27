@@ -7,7 +7,6 @@ import '../models/device.dart';
 import '../models/building.dart';
 import '../models/defect.dart';
 import '../models/device_state.dart';
-import '../models/safety_grade.dart';
 
 // 서버와의 API 통신을 전담하는 Service 클래스 (REST API 연동 방식)
 // 백엔드 Swagger API 스펙 기준으로 완전 동기화됨
@@ -596,41 +595,5 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // [시설물 안전등급(SafetyGrade) API]
-  // 백엔드 Swagger: GET /api/safety-grades/
-  // ==========================================
-
-  // 18. 시설물 안전등급 기준표 전체 조회
-  Future<List<SafetyGrade>> getSafetyGrades() async {
-    debugPrint('🔍 [안전등급] 기준표 조회');
-    try {
-      final response = await _dio.get('/api/safety-grades/');
-      if (response.statusCode == 200) {
-        dynamic parsed = response.data;
-        if (parsed is String) {
-          parsed = jsonDecode(parsed);
-        }
-
-        List<dynamic> data = [];
-        if (parsed is List) {
-          data = parsed;
-        } else if (parsed is Map) {
-          for (var v in parsed.values) {
-            if (v is List) {
-              data = v;
-              break;
-            }
-          }
-        }
-
-        debugPrint('🔍 [안전등급] 파싱된 등급 수: ${data.length}건');
-        return data.map((json) => SafetyGrade.fromJson(json)).toList();
-      }
-      return [];
-    } catch (e) {
-      debugPrint('🚨 HTTP getSafetyGrades Error: $e');
-      return [];
-    }
-  }
+  // [시설물 안전등급 API 삭제 완료 - 프론트엔드 하드코딩 뷰로 분리됨]
 }

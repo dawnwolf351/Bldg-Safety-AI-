@@ -15,6 +15,7 @@ import '../services/report_service.dart';
 import '../models/device_state.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'safety_grade_view.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -577,7 +578,7 @@ class _DashboardViewState extends State<DashboardView> {
             const SizedBox(width: 8),
             Expanded(
               child: _buildActionGridButton(Icons.shield_outlined, '안전등급\n기준표', brandingBlue, onTap: () {
-                _showSafetyGradeSheet(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyGradeView()));
               }),
             ),
           ],
@@ -615,132 +616,6 @@ class _DashboardViewState extends State<DashboardView> {
       ),
     );
   }
-
-  // 안전등급 기준표 바텀시트 (A~E 등급 레이아웃)
-  void _showSafetyGradeSheet(BuildContext context) {
-    final grades = Provider.of<DashboardViewModel>(context, listen: false).safetyGrades;
-
-    if (grades.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('안전등급 데이터를 아직 불러오지 못했습니다.'), backgroundColor: Colors.redAccent),
-      );
-      return;
-    }
-
-    // 등급별 색상 매핑
-    final gradeColors = {
-      'A': const Color(0xFF22C55E),
-      'B': const Color(0xFF3B82F6),
-      'C': const Color(0xFFF59E0B),
-      'D': const Color(0xFFF97316),
-      'E': const Color(0xFFEF4444),
-    };
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 핸들
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-              ),
-              // 타이틀
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.shield_outlined, color: Color(0xFF2563EB), size: 24),
-                    const SizedBox(width: 8),
-                    const Text('시설물 안전등급 기준표', style: TextStyle(color: Color(0xFF1A1D21), fontSize: 18, fontWeight: FontWeight.w900)),
-                    const Spacer(),
-                    IconButton(icon: const Icon(Icons.close, color: Color(0xFF6B7280)), onPressed: () => Navigator.pop(context)),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, color: Color(0xFFE5E7EB)),
-              // 등급 리스트
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: grades.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final grade = grades[index];
-                    final color = gradeColors[grade.grade] ?? Colors.grey;
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 등급 배지
-                          Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(grade.grade, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          // 정보
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(grade.label, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(grade.state, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(grade.description, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.4)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   // 보고서 생성 시 장치 선택 모달 (화이트 테마 & 모바일 사이즈 최적화)
   void _showReportDeviceSelector(BuildContext context) {
     final devices = Provider.of<DeviceViewModel>(context, listen: false).devices;

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/drone.dart';
 import '../models/defect.dart';
 import '../models/device_state.dart';
-import '../models/safety_grade.dart';
 import '../services/webrtc_service.dart';
 import '../services/api_service.dart';
 
@@ -16,10 +15,6 @@ class DashboardViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isStreaming = false;
   String? _activeDroneId;
-
-  // [추가] 시설물 안전등급 기준표
-  List<SafetyGrade> _safetyGrades = [];
-  List<SafetyGrade> get safetyGrades => _safetyGrades;
 
   // [추가] 특정 기기 상태 캐시 (device_id -> DeviceState)
   final Map<int, DeviceState> _deviceStates = {};
@@ -40,13 +35,6 @@ class DashboardViewModel extends ChangeNotifier {
     // await Future.delayed(const Duration(seconds: 1));
     _drones = [];
     _defects = [];
-
-    // [추가] 안전등급 기준표 비동기 로드
-    try {
-      _safetyGrades = await _apiService.getSafetyGrades();
-    } catch (e) {
-      debugPrint('🚨 안전등급 로드 실패: $e');
-    }
 
     _isLoading = false;
     notifyListeners();
