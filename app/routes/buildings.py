@@ -26,7 +26,10 @@ defect_model = defect_ns.model('Defect', {
     'defect_type': fields.String(required=True, description='결함 유형 (예: 화재, 균열)'),
     'severity': fields.String(description='심각도 (경미/주의/심각)', example='주의'),
     'image_url': fields.String(description='AI 촬영 결함 사진 경로', example='/uploads/defects/fire_01.jpg'),
-    'comment': fields.String(description='상세 설명')
+    'comment': fields.String(description='상세 설명'),
+    'confidence': fields.Float(description='AI 확신도 (0.0 ~ 1.0)', example=0.95),
+    'bbox': fields.String(description='결함 바운딩 박스 위치 좌표', example='[100, 200, 150, 250]'),
+    'size_px': fields.Float(description='결함 크기/면적', example=45.2)
 })
 
 # ==========================================
@@ -174,7 +177,10 @@ class DefectList(Resource):
                 defect_type=data['defect_type'],
                 severity=data.get('severity'),
                 image_url=data.get('image_url'),
-                comment=data.get('comment')
+                comment=data.get('comment'),
+                confidence=data.get('confidence'),
+                bbox=data.get('bbox'),
+                size_px=data.get('size_px')
             )
             db.session.add(new_defect)
             db.session.commit()
@@ -184,7 +190,7 @@ class DefectList(Resource):
 
 
 @defect_ns.route('/<int:defect_id>')
-@defect_ns.param('defect_id', '조회/삭제할 결함의 고유 ID')
+@defect_ns.param('defect_id', '조회/수정/삭제할 결함의 고유 ID')
 class DefectDetail(Resource):
     @defect_ns.doc(
         description='특정 결함의 상세 정보를 조회합니다.',
@@ -195,6 +201,35 @@ class DefectDetail(Resource):
         """특정 결함 상세 조회"""
         defect = Defect.query.get_or_404(defect_id)
         return defect.to_dict(), HTTPStatus.OK
+
+    @defect_ns.expect(defect_model)
+    @defect_ns.doc(
+        description='결함 정보를 수정합니다. (메모, 심각도, 결함유형, 이미지 등)',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def put(self, current_user, defect_id):
+        """결함 정보 수정 (모든 인증된 사용자 가능)"""
+        defect = Defect.query.get_or_404(defect_id)
+        data = request.get_json()
+
+        if 'comment' in data:
+            defect.comment = data['comment']
+        if 'severity' in data:
+            defect.severity = data['severity']
+        if 'defect_type' in data:
+            defect.defect_type = data['defect_type']
+        if 'image_url' in data:
+            defect.image_url = data['image_url']
+        if 'confidence' in data:
+            defect.confidence = data['confidence']
+        if 'bbox' in data:
+            defect.bbox = data['bbox']
+        if 'size_px' in data:
+            defect.size_px = data['size_px']
+
+        db.session.commit()
+        return {"message": "결함 정보가 수정되었습니다.", "defect": defect.to_dict()}, HTTPStatus.OK
 
     @defect_ns.doc(
         description='결함 이력을 삭제합니다. (관리자 레벨 2 이상)',
@@ -212,7 +247,6 @@ class DefectDetail(Resource):
         db.session.delete(defect)
         db.session.commit()
         return {"message": f"결함(ID: {defect_id})이 삭제되었습니다."}, HTTPStatus.OK
-
     @defect_ns.doc(
         description='결함의 메모(comment)를 수정합니다.',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
@@ -231,4 +265,3 @@ class DefectDetail(Resource):
             return {'message': '메모가 저장되었습니다.', 'defect': defect.to_dict()}, HTTPStatus.OK
         else:
             return {"error": "수정할 comment 필드가 없습니다."}, HTTPStatus.BAD_REQUEST
-

@@ -6,7 +6,7 @@ from app.extensions import db, bcrypt
 from app.models.role import Role
 from app.models.user import User
 from app.services.tcp_server import start_tcp_server
-from app.models.detection import Detection, RiskAssessment, Alert
+from app.models.risk_assessment import RiskAssessment, Alert
 from app.models.device_state import DeviceState
 from app.models.safety_grade import SafetyGrade
 
