@@ -41,6 +41,8 @@ dependencies:
   audioplayers: ^6.6.0
   # 갤러리/카메라에서 이미지 선택 (결함 이미지 업로드용)
   image_picker: ^1.1.2
+  # 실시간 그래프 (장비 상태 모니터링)
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

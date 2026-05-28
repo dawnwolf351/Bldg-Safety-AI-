@@ -312,13 +312,13 @@ class _DeviceMonitorCardWidgetState extends State<DeviceMonitorCardWidget> {
           
           // 실시간 센서/시스템 리소스 그리드 영역 (기존 습도/진동 -> CPU/GPU 사용량으로 변경)
           if (device.isOnline && _currentState != null) ...[
-            Row(
+            Column(
               children: [
-                Expanded(child: _buildSensorBox(Icons.thermostat_rounded, '코어 온도', '${temp.toStringAsFixed(1)}°C', temp >= 60 ? AppColors.statusRed : AppColors.brandingBlue)),
-                const SizedBox(width: 10),
-                Expanded(child: _buildSensorBox(Icons.memory_rounded, 'CPU 사용', '${cpuUsage.toStringAsFixed(0)}%', cpuUsage >= 90 ? AppColors.statusOrange : AppColors.brandingBlue)),
-                const SizedBox(width: 10),
-                Expanded(child: _buildSensorBox(Icons.developer_board_rounded, 'GPU 사용', '${gpuUsage.toStringAsFixed(0)}%', gpuUsage >= 90 ? AppColors.statusOrange : AppColors.statusGreen)),
+                _buildGaugeRow(Icons.memory_rounded, 'CPU 사용률', _currentState!.cpuUsage, 100, Colors.green),
+                const SizedBox(height: 8),
+                _buildGaugeRow(Icons.developer_board_rounded, 'GPU 사용률', _currentState!.gpuUsage, 100, Colors.deepPurple),
+                const SizedBox(height: 8),
+                _buildGaugeRow(Icons.thermostat_rounded, '코어 온도', _currentState!.temperatureCpu, 100, _currentState!.temperatureCpu >= 60 ? AppColors.statusRed : AppColors.brandingBlue),
               ],
             ),
           ] else ...[
@@ -377,23 +377,56 @@ class _DeviceMonitorCardWidgetState extends State<DeviceMonitorCardWidget> {
     );
   }
 
-  Widget _buildSensorBox(IconData icon, String label, String value, Color color) {
+  Widget _buildGaugeRow(IconData icon, String label, double value, double max, Color color) {
+    final double percentage = (value / max).clamp(0.0, 1.0);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.bgOffWhite,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.1)),
       ),
-      child: Column(
+      child: Row(
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(value, 
-              style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 2),
-          Text(label, 
-              style: const TextStyle(color: AppColors.lightGrey, fontSize: 10, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(label, style: const TextStyle(color: AppColors.lightGrey, fontSize: 11, fontWeight: FontWeight.w600)),
+                    Text(label.contains('온도') ? '${value.toStringAsFixed(1)}°C' : '${value.toStringAsFixed(0)}%', 
+                        style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Stack(
+                  children: [
+                    Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: percentage,
+                      child: Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

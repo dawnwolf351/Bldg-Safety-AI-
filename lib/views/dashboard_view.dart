@@ -16,6 +16,7 @@ import '../models/device_state.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'safety_grade_view.dart';
+import 'device_realtime_monitor_view.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -180,13 +181,16 @@ class _DashboardViewState extends State<DashboardView> {
                       const Text('AI 인프라 가동상태', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
                       Consumer2<DeviceViewModel, DashboardViewModel>(
                         builder: (context, deviceVM, dashVM, _) {
-                          DeviceState? selectedState;
                           final devices = deviceVM.devices;
-                          if (devices.isNotEmpty && _selectedDeviceIndex < devices.length) {
-                            selectedState = dashVM.deviceStates[devices[_selectedDeviceIndex].id];
-                          }
+                          final selDevice = devices.isNotEmpty && _selectedDeviceIndex < devices.length ? devices[_selectedDeviceIndex] : null;
                           return GestureDetector(
-                            onTap: () => _showDeviceDetailDialog(context, selectedState),
+                            onTap: () {
+                              if (selDevice != null) {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => DeviceRealTimeMonitorView(device: selDevice),
+                                ));
+                              }
+                            },
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
@@ -246,77 +250,13 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  // 상세보기 다이얼로그 (추론 FPS, 모델명, 카메라, 깊이 센서 상태)
-  void _showDeviceDetailDialog(BuildContext context, DeviceState? state) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: cardWhite,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: brandingBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.analytics_outlined, color: brandingBlue, size: 20),
-            ),
-            const SizedBox(width: 10),
-            const Text('AI 장비 상세 상태', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.w900)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDetailRow(Icons.speed, '추론 FPS', state != null && state.inferenceFps != null ? '${state.inferenceFps!.toStringAsFixed(1)} fps' : '--', Colors.deepPurple),
-            const SizedBox(height: 12),
-            _buildDetailRow(Icons.model_training, 'AI 모델명', state?.modelName ?? '--', brandingBlue),
-            const SizedBox(height: 12),
-            _buildDetailRow(Icons.videocam_outlined, '카메라 상태', state?.cameraStatus ?? '--', state?.cameraStatus == 'OK' ? Colors.green : Colors.redAccent),
-            const SizedBox(height: 12),
-            _buildDetailRow(Icons.sensors, '깊이 센서', state?.depthSensorStatus ?? '--', state?.depthSensorStatus == 'OK' ? Colors.green : Colors.redAccent),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, Color iconColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: BoxDecoration(
-        color: bgOffWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderLight),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(label, style: const TextStyle(color: textLightGrey, fontSize: 12, fontWeight: FontWeight.w600)),
-          ),
-          Text(value, style: TextStyle(color: value == 'OK' ? Colors.green : (value == '--' ? textLightGrey : textCharcoal), fontSize: 13, fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
 
   // 7개 장비 상태 카드 (가로 스크롤)
   Widget _buildSummaryCardsGrid() {
     return Consumer2<DeviceViewModel, DashboardViewModel>(
       builder: (context, deviceVM, dashVM, child) {
         final devices = deviceVM.devices;
-        final defectCount = dashVM.defects.length;
 
         // 선택된 기기의 상태 정보
         DeviceState? selectedState;
@@ -326,35 +266,19 @@ class _DashboardViewState extends State<DashboardView> {
 
         final cpuUsage = selectedState?.cpuUsage;
         final gpuUsage = selectedState?.gpuUsage;
-        final gpuMemUsage = selectedState?.gpuMemoryUsage;
-        final ramUsage = selectedState?.ramUsage;
-        final tempSoc = selectedState?.temperatureSoc;
         final tempCpu = selectedState?.temperatureCpu;
         final tempGpu = selectedState?.temperatureGpu;
 
-        return SizedBox(
-          height: 100,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            children: [
-              _buildInfraStatCard('발견 결함', '$defectCount', Icons.warning_amber_rounded, Colors.redAccent, defectCount > 0 ? '확인 필요' : '이상 없음', defectCount == 0),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('CPU 사용률', cpuUsage != null ? '${cpuUsage.toStringAsFixed(0)}%' : '--', Icons.memory, Colors.green, cpuUsage != null ? (cpuUsage < 70 ? '안정적' : '부하 주의') : '조회 중', cpuUsage == null || cpuUsage < 70),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('GPU 사용률', gpuUsage != null ? '${gpuUsage.toStringAsFixed(0)}%' : '--', Icons.developer_board, Colors.deepPurple, gpuUsage != null ? (gpuUsage < 80 ? '안정적' : '부하 주의') : '조회 중', gpuUsage == null || gpuUsage < 80),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('GPU 메모리', gpuMemUsage != null ? '${gpuMemUsage.toStringAsFixed(0)}%' : '--', Icons.storage, Colors.indigo, gpuMemUsage != null ? (gpuMemUsage < 80 ? '여유' : '부족 주의') : '조회 중', gpuMemUsage == null || gpuMemUsage < 80),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('RAM 사용률', ramUsage != null ? '${ramUsage.toStringAsFixed(0)}%' : '--', Icons.sd_storage_outlined, Colors.teal, ramUsage != null ? (ramUsage < 80 ? '여유' : '부족 주의') : '조회 중', ramUsage == null || ramUsage < 80),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('SoC 온도', tempSoc != null ? '${tempSoc.toStringAsFixed(0)}℃' : '--', Icons.thermostat_auto, Colors.orange, tempSoc != null ? (tempSoc < 70 ? '정상 범위' : '과열 주의') : '조회 중', tempSoc == null || tempSoc < 70),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('CPU 온도', tempCpu != null ? '${tempCpu.toStringAsFixed(0)}℃' : '--', Icons.thermostat, Colors.orangeAccent, tempCpu != null ? (tempCpu < 70 ? '정상 범위' : '과열 주의') : '조회 중', tempCpu == null || tempCpu < 70),
-              const SizedBox(width: 8),
-              _buildInfraStatCard('GPU 온도', tempGpu != null ? '${tempGpu.toStringAsFixed(0)}℃' : '--', Icons.local_fire_department_outlined, Colors.red, tempGpu != null ? (tempGpu < 75 ? '정상 범위' : '과열 경고') : '조회 중', tempGpu == null || tempGpu < 75),
-            ],
-          ),
+        return Row(
+          children: [
+            Expanded(child: _buildInfraStatCard('CPU 사용률', cpuUsage != null ? '${cpuUsage.toStringAsFixed(0)}%' : '--', Icons.memory, Colors.green, cpuUsage != null ? (cpuUsage < 70 ? '안정적' : '부하 주의') : '조회 중', cpuUsage == null || cpuUsage < 70)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildInfraStatCard('GPU 사용률', gpuUsage != null ? '${gpuUsage.toStringAsFixed(0)}%' : '--', Icons.developer_board, Colors.deepPurple, gpuUsage != null ? (gpuUsage < 80 ? '안정적' : '부하 주의') : '조회 중', gpuUsage == null || gpuUsage < 80)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildInfraStatCard('CPU 온도', tempCpu != null ? '${tempCpu.toStringAsFixed(0)}℃' : '--', Icons.thermostat, Colors.orangeAccent, tempCpu != null ? (tempCpu < 70 ? '정상 범위' : '과열 주의') : '조회 중', tempCpu == null || tempCpu < 70)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildInfraStatCard('GPU 온도', tempGpu != null ? '${tempGpu.toStringAsFixed(0)}℃' : '--', Icons.local_fire_department_outlined, Colors.red, tempGpu != null ? (tempGpu < 75 ? '정상 범위' : '과열 경고') : '조회 중', tempGpu == null || tempGpu < 75)),
+          ],
         );
       },
     );
