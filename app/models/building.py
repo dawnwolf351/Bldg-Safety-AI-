@@ -56,6 +56,9 @@ class Defect(db.Model):
             "severity": self.severity,
             "image_url": self.image_url,
             "comment": self.comment,
+            "confidence": self.confidence,
+            "bbox": self.bbox,
+            "size_px": self.size_px,
             "detection_time": self.detection_time.strftime("%Y-%m-%d %H:%M:%S") if self.detection_time else None
         }
 

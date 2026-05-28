@@ -26,7 +26,10 @@ defect_model = defect_ns.model('Defect', {
     'defect_type': fields.String(required=True, description='결함 유형 (예: 화재, 균열)'),
     'severity': fields.String(description='심각도 (경미/주의/심각)', example='주의'),
     'image_url': fields.String(description='AI 촬영 결함 사진 경로', example='/uploads/defects/fire_01.jpg'),
-    'comment': fields.String(description='상세 설명')
+    'comment': fields.String(description='상세 설명'),
+    'confidence': fields.Float(description='AI 확신도 (0.0 ~ 1.0)', example=0.95),
+    'bbox': fields.String(description='결함 바운딩 박스 위치 좌표', example='[100, 200, 150, 250]'),
+    'size_px': fields.Float(description='결함 크기/면적', example=45.2)
 })
 
 # ==========================================
@@ -174,7 +177,10 @@ class DefectList(Resource):
                 defect_type=data['defect_type'],
                 severity=data.get('severity'),
                 image_url=data.get('image_url'),
-                comment=data.get('comment')
+                comment=data.get('comment'),
+                confidence=data.get('confidence'),
+                bbox=data.get('bbox'),
+                size_px=data.get('size_px')
             )
             db.session.add(new_defect)
             db.session.commit()
@@ -215,6 +221,12 @@ class DefectDetail(Resource):
             defect.defect_type = data['defect_type']
         if 'image_url' in data:
             defect.image_url = data['image_url']
+        if 'confidence' in data:
+            defect.confidence = data['confidence']
+        if 'bbox' in data:
+            defect.bbox = data['bbox']
+        if 'size_px' in data:
+            defect.size_px = data['size_px']
 
         db.session.commit()
         return {"message": "결함 정보가 수정되었습니다.", "defect": defect.to_dict()}, HTTPStatus.OK
