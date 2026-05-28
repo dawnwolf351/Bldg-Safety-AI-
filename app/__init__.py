@@ -35,7 +35,7 @@ def create_app():
         extensions.redis_client.ping()
         print("[시스템] Redis 연결 성공")
     except redis.ConnectionError:
-        print("[경고] Redis 연결 실패 — 토큰 블랙리스트 기능이 비활성화됩니다.")
+        print("[경고] Redis 연결 실패 - 토큰 블랙리스트 기능이 비활성화됩니다.")
         extensions.redis_client = None
 
     # 네임스페이스 등록
@@ -44,6 +44,7 @@ def create_app():
     api.add_namespace(users_ns, path='/api/users')
     api.add_namespace(building_ns, path='/api/buildings')
     api.add_namespace(defect_ns, path='/api/defects')
+    api.add_namespace(grade_ns, path='/api/safety-grades')
 
     # DB 모델 임포트 및 테이블 자동 생성
     with app.app_context():
@@ -51,6 +52,9 @@ def create_app():
         from app.models.user import User
         from app.models.device import JetsonDevice
         from app.models.building import Building, Defect
+        from app.models.detection import Detection, RiskAssessment, Alert
+        from app.models.device_state import DeviceState
+        from app.models.safety_grade import SafetyGrade
         db.create_all()
 
     # 기본 루트 경로 (접속 확인용)
@@ -68,7 +72,10 @@ def create_app():
         print(f"--- [REQUEST] {request.method} {request.url} ---")
         print(f"Headers: {dict(request.headers)}")
         if request.is_json:
-            print(f"Body: {request.get_json()}")
+            # silent=True를 설정하여 바디가 비어있어도 400 에러를 던지지 않도록 수정
+            body = request.get_json(silent=True)
+            if body:
+                print(f"Body: {body}")
         print("---------------------------------------")
 
     return app

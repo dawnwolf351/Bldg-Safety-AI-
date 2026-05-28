@@ -1,5 +1,4 @@
 from datetime import datetime
-from app import db
 
 
 class DeviceState(db.Model):
@@ -38,7 +37,6 @@ class DeviceState(db.Model):
         return {
             "id": self.id,
             "device_id": self.device_id,
-            # ISO 8601 형식으로 변환하여 반환 (예: 2026-05-27T13:01:29Z)
             "recorded_at": self.recorded_at.isoformat() + 'Z' if self.recorded_at else None,
             "cpu_usage": self.cpu_usage,
             "gpu_usage": self.gpu_usage,
