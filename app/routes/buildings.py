@@ -184,7 +184,7 @@ class DefectList(Resource):
 
 
 @defect_ns.route('/<int:defect_id>')
-@defect_ns.param('defect_id', '조회/삭제할 결함의 고유 ID')
+@defect_ns.param('defect_id', '조회/수정/삭제할 결함의 고유 ID')
 class DefectDetail(Resource):
     @defect_ns.doc(
         description='특정 결함의 상세 정보를 조회합니다.',
@@ -195,6 +195,29 @@ class DefectDetail(Resource):
         """특정 결함 상세 조회"""
         defect = Defect.query.get_or_404(defect_id)
         return defect.to_dict(), HTTPStatus.OK
+
+    @defect_ns.expect(defect_model)
+    @defect_ns.doc(
+        description='결함 정보를 수정합니다. (메모, 심각도, 결함유형, 이미지 등)',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def put(self, current_user, defect_id):
+        """결함 정보 수정 (모든 인증된 사용자 가능)"""
+        defect = Defect.query.get_or_404(defect_id)
+        data = request.get_json()
+
+        if 'comment' in data:
+            defect.comment = data['comment']
+        if 'severity' in data:
+            defect.severity = data['severity']
+        if 'defect_type' in data:
+            defect.defect_type = data['defect_type']
+        if 'image_url' in data:
+            defect.image_url = data['image_url']
+
+        db.session.commit()
+        return {"message": "결함 정보가 수정되었습니다.", "defect": defect.to_dict()}, HTTPStatus.OK
 
     @defect_ns.doc(
         description='결함 이력을 삭제합니다. (관리자 레벨 2 이상)',
