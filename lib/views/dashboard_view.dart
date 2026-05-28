@@ -174,7 +174,40 @@ class _DashboardViewState extends State<DashboardView> {
                   const SizedBox(height: 24),
                   
                   // 2. Summary Cards (영상 밑으로 배치, 타이틀 추가)
-                  const Text('AI 추론 인프라 가동상태', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('AI 인프라 가동상태', style: TextStyle(color: textCharcoal, fontSize: 15, fontWeight: FontWeight.bold)),
+                      Consumer2<DeviceViewModel, DashboardViewModel>(
+                        builder: (context, deviceVM, dashVM, _) {
+                          DeviceState? selectedState;
+                          final devices = deviceVM.devices;
+                          if (devices.isNotEmpty && _selectedDeviceIndex < devices.length) {
+                            selectedState = dashVM.deviceStates[devices[_selectedDeviceIndex].id];
+                          }
+                          return GestureDetector(
+                            onTap: () => _showDeviceDetailDialog(context, selectedState),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: brandingBlue.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: brandingBlue.withValues(alpha: 0.3)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.info_outline, color: brandingBlue, size: 13),
+                                  SizedBox(width: 4),
+                                  Text('상세보기', style: TextStyle(color: brandingBlue, fontSize: 11, fontWeight: FontWeight.w800)),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   _buildSummaryCardsGrid(),
                   const SizedBox(height: 24),
@@ -213,12 +246,76 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
-  // 4개의 통계 카드 영역 (모바일용 가로 배치 - 퀵 액션 크기)
+  // 상세보기 다이얼로그 (추론 FPS, 모델명, 카메라, 깊이 센서 상태)
+  void _showDeviceDetailDialog(BuildContext context, DeviceState? state) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardWhite,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: brandingBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.analytics_outlined, color: brandingBlue, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('AI 장비 상세 상태', style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDetailRow(Icons.speed, '추론 FPS', state != null && state.inferenceFps != null ? '${state.inferenceFps!.toStringAsFixed(1)} fps' : '--', Colors.deepPurple),
+            const SizedBox(height: 12),
+            _buildDetailRow(Icons.model_training, 'AI 모델명', state?.modelName ?? '--', brandingBlue),
+            const SizedBox(height: 12),
+            _buildDetailRow(Icons.videocam_outlined, '카메라 상태', state?.cameraStatus ?? '--', state?.cameraStatus == 'OK' ? Colors.green : Colors.redAccent),
+            const SizedBox(height: 12),
+            _buildDetailRow(Icons.sensors, '깊이 센서', state?.depthSensorStatus ?? '--', state?.depthSensorStatus == 'OK' ? Colors.green : Colors.redAccent),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('닫기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      decoration: BoxDecoration(
+        color: bgOffWhite,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderLight),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(label, style: const TextStyle(color: textLightGrey, fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+          Text(value, style: TextStyle(color: value == 'OK' ? Colors.green : (value == '--' ? textLightGrey : textCharcoal), fontSize: 13, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+
+  // 7개 장비 상태 카드 (가로 스크롤)
   Widget _buildSummaryCardsGrid() {
     return Consumer2<DeviceViewModel, DashboardViewModel>(
       builder: (context, deviceVM, dashVM, child) {
         final devices = deviceVM.devices;
-        final onlineCount = devices.where((d) => d.isOnline).length;
         final defectCount = dashVM.defects.length;
 
         // 선택된 기기의 상태 정보
@@ -227,29 +324,46 @@ class _DashboardViewState extends State<DashboardView> {
           selectedState = dashVM.deviceStates[devices[_selectedDeviceIndex].id];
         }
 
-        final cpuText = selectedState != null ? '${selectedState.cpuUsage.toStringAsFixed(0)}%' : '--';
-        final tempText = selectedState != null ? '${selectedState.maxTemperature.toStringAsFixed(0)}℃' : '--';
-        final cpuStatus = selectedState != null ? (selectedState.cpuUsage < 70 ? '안정적' : '부하 주의') : '조회 중';
-        final tempStatus = selectedState != null ? (selectedState.isOverheated ? '과열 경고!' : '정상 범위') : '조회 중';
+        final cpuUsage = selectedState?.cpuUsage;
+        final gpuUsage = selectedState?.gpuUsage;
+        final gpuMemUsage = selectedState?.gpuMemoryUsage;
+        final ramUsage = selectedState?.ramUsage;
+        final tempSoc = selectedState?.temperatureSoc;
+        final tempCpu = selectedState?.temperatureCpu;
+        final tempGpu = selectedState?.temperatureGpu;
 
-        return Row(
-          children: [
-            Expanded(child: _buildAdminStatCard('전체 장치', '${devices.length}', Icons.dns_outlined, brandingBlue, '$onlineCount대 온라인', true)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildAdminStatCard('발견 결함', '$defectCount', Icons.warning_amber_rounded, Colors.redAccent, defectCount > 0 ? '확인 필요' : '이상 없음', defectCount == 0)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildAdminStatCard('CPU 사용률', cpuText, Icons.memory, Colors.green, cpuStatus, selectedState == null || selectedState.cpuUsage < 70)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildAdminStatCard('기기 온도', tempText, Icons.thermostat, Colors.orangeAccent, tempStatus, selectedState == null || !selectedState.isOverheated)),
-          ],
+        return SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildInfraStatCard('발견 결함', '$defectCount', Icons.warning_amber_rounded, Colors.redAccent, defectCount > 0 ? '확인 필요' : '이상 없음', defectCount == 0),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('CPU 사용률', cpuUsage != null ? '${cpuUsage.toStringAsFixed(0)}%' : '--', Icons.memory, Colors.green, cpuUsage != null ? (cpuUsage < 70 ? '안정적' : '부하 주의') : '조회 중', cpuUsage == null || cpuUsage < 70),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('GPU 사용률', gpuUsage != null ? '${gpuUsage.toStringAsFixed(0)}%' : '--', Icons.developer_board, Colors.deepPurple, gpuUsage != null ? (gpuUsage < 80 ? '안정적' : '부하 주의') : '조회 중', gpuUsage == null || gpuUsage < 80),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('GPU 메모리', gpuMemUsage != null ? '${gpuMemUsage.toStringAsFixed(0)}%' : '--', Icons.storage, Colors.indigo, gpuMemUsage != null ? (gpuMemUsage < 80 ? '여유' : '부족 주의') : '조회 중', gpuMemUsage == null || gpuMemUsage < 80),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('RAM 사용률', ramUsage != null ? '${ramUsage.toStringAsFixed(0)}%' : '--', Icons.sd_storage_outlined, Colors.teal, ramUsage != null ? (ramUsage < 80 ? '여유' : '부족 주의') : '조회 중', ramUsage == null || ramUsage < 80),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('SoC 온도', tempSoc != null ? '${tempSoc.toStringAsFixed(0)}℃' : '--', Icons.thermostat_auto, Colors.orange, tempSoc != null ? (tempSoc < 70 ? '정상 범위' : '과열 주의') : '조회 중', tempSoc == null || tempSoc < 70),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('CPU 온도', tempCpu != null ? '${tempCpu.toStringAsFixed(0)}℃' : '--', Icons.thermostat, Colors.orangeAccent, tempCpu != null ? (tempCpu < 70 ? '정상 범위' : '과열 주의') : '조회 중', tempCpu == null || tempCpu < 70),
+              const SizedBox(width: 8),
+              _buildInfraStatCard('GPU 온도', tempGpu != null ? '${tempGpu.toStringAsFixed(0)}℃' : '--', Icons.local_fire_department_outlined, Colors.red, tempGpu != null ? (tempGpu < 75 ? '정상 범위' : '과열 경고') : '조회 중', tempGpu == null || tempGpu < 75),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildAdminStatCard(String title, String value, IconData icon, Color iconColor, String statusText, bool isPositive) {
+  Widget _buildInfraStatCard(String title, String value, IconData icon, Color iconColor, String statusText, bool isPositive) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      width: 90,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(12),
@@ -261,18 +375,18 @@ class _DashboardViewState extends State<DashboardView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(color: textLightGrey, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Icon(icon, color: iconColor, size: 20),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
+          Text(title, style: const TextStyle(color: textLightGrey, fontSize: 9, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(color: textCharcoal, fontSize: 14, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 3),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(isPositive ? Icons.check_circle_outline : Icons.trending_up, color: isPositive ? Colors.green : Colors.redAccent, size: 8),
+              Icon(isPositive ? Icons.check_circle_outline : Icons.warning_amber_rounded, color: isPositive ? Colors.green : Colors.redAccent, size: 7),
               const SizedBox(width: 2),
-              Flexible(child: Text(statusText, style: TextStyle(color: isPositive ? Colors.green : Colors.redAccent, fontSize: 8, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1)),
+              Flexible(child: Text(statusText, style: TextStyle(color: isPositive ? Colors.green : Colors.redAccent, fontSize: 7, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1)),
             ],
           ),
         ],
