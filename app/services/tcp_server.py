@@ -42,9 +42,17 @@ def handle_client(client_socket, addr, app):
                     device.is_online = True
                     device.last_connected_at = datetime.utcnow()
 
-                    # 2. 장비 상태(DeviceState) DB에 저장 
-                    # 젯슨이 단순 하트비트(MAC만 전송)를 보낼 때 빈 0값 데이터가 쌓이는 것을 방지
-                    if 'cpu_usage' in info or 'temperature_cpu' in info:
+                    # 2. 메시지 타입(type) 기반 라우팅 (실무 표준 방식)
+                    msg_type = info.get('type')
+                    
+                    # [하위 호환성 유지] 젯슨 파이썬 코드가 아직 업데이트되지 않아 'type' 필드가 없을 경우를 대비한 자동 분류
+                    if not msg_type:
+                        msg_type = 'telemetry' if ('cpu_usage' in info or 'temperature_cpu' in info) else 'heartbeat'
+
+                    if msg_type == 'heartbeat':
+                        print(f"💓 [TCP 서버] 하트비트 수신 (온라인 상태 갱신 완료): MAC={mac}")
+                        
+                    elif msg_type == 'telemetry':
                         new_state = DeviceState(
                             device_id=device.device_id,
                             cpu_usage=info.get('cpu_usage', 0.0),
@@ -60,9 +68,10 @@ def handle_client(client_socket, addr, app):
                             depth_sensor_status=info.get('depth_sensor_status')
                         )
                         db.session.add(new_state)
-                        print(f"✅ [TCP 서버] 상태 기록 완료: MAC={mac}, CPU={info.get('cpu_usage', 0)}%, 온도={info.get('temperature_cpu', 0)}℃")
+                        print(f"✅ [TCP 서버] 상태(Telemetry) 기록 완료: MAC={mac}, CPU={info.get('cpu_usage', 0)}%, 온도={info.get('temperature_cpu', 0)}℃")
+                    
                     else:
-                        print(f"💓 [TCP 서버] 단순 통신 유지용 하트비트 수신 (DB 기록 생략): MAC={mac}")
+                        print(f"⚠️ [TCP 서버] 알 수 없는 메시지 타입 수신: {msg_type}")
 
                     # 3. DB 변경사항 커밋 (기기 접속시간 갱신 및 상태 추가 반영)
                     db.session.commit()
