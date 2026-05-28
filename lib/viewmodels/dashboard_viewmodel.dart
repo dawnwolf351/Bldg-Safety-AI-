@@ -21,6 +21,10 @@ class DashboardViewModel extends ChangeNotifier {
   final Map<int, DeviceState> _deviceStates = {};
   Map<int, DeviceState> get deviceStates => _deviceStates;
 
+  // [추가] 특정 기기 상태 이력 (device_id -> List<DeviceState>)
+  final Map<int, List<DeviceState>> _deviceStateHistory = {};
+  Map<int, List<DeviceState>> get deviceStateHistory => _deviceStateHistory;
+
   // [추가] 실시간 상태 갱신 타이머 (5초 주기)
   Timer? _stateRefreshTimer;
 
@@ -64,6 +68,15 @@ class DashboardViewModel extends ChangeNotifier {
       final states = await _apiService.getAllDeviceStates();
       for (final state in states) {
         _deviceStates[state.deviceId] = state;
+        
+        // 이력 추가 (최대 20개 유지)
+        if (!_deviceStateHistory.containsKey(state.deviceId)) {
+          _deviceStateHistory[state.deviceId] = [];
+        }
+        _deviceStateHistory[state.deviceId]!.add(state);
+        if (_deviceStateHistory[state.deviceId]!.length > 20) {
+          _deviceStateHistory[state.deviceId]!.removeAt(0);
+        }
       }
       if (states.isNotEmpty) {
         notifyListeners();

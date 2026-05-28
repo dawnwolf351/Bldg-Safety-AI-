@@ -1,68 +1,17 @@
-import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/device_state.dart';
 import '../models/device.dart';
-import '../services/api_service.dart';
 import '../theme/app_colors.dart';
+import '../viewmodels/dashboard_viewmodel.dart';
 
 /// 장비 실시간 상태 상세 모니터링 화면
 /// - 각 메트릭별 실시간 라인 차트
-/// - 5초 주기 자동 갱신
-class DeviceRealTimeMonitorView extends StatefulWidget {
+/// - 대시보드 뷰모델의 히스토리 데이터를 공유받아 이전 데이터 누락 없이 표시
+class DeviceRealTimeMonitorView extends StatelessWidget {
   final Device device;
   const DeviceRealTimeMonitorView({super.key, required this.device});
-
-  @override
-  State<DeviceRealTimeMonitorView> createState() => _DeviceRealTimeMonitorViewState();
-}
-
-class _DeviceRealTimeMonitorViewState extends State<DeviceRealTimeMonitorView> {
-  final ApiService _api = ApiService();
-  Timer? _timer;
-  DeviceState? _latest;
-
-  // 각 메트릭별 최근 20개 포인트 이력
-  final List<double> _cpuHistory    = [];
-  final List<double> _gpuHistory    = [];
-  final List<double> _ramHistory    = [];
-  final List<double> _tempSocHistory = [];
-  final List<double> _tempCpuHistory = [];
-  final List<double> _tempGpuHistory = [];
-
-  static const int _maxPoints = 20;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetch();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _fetch());
-  }
-
-  Future<void> _fetch() async {
-    final state = await _api.getDeviceState(widget.device.id);
-    if (!mounted || state == null) return;
-    setState(() {
-      _latest = state;
-      _addPoint(_cpuHistory,     state.cpuUsage);
-      _addPoint(_gpuHistory,     state.gpuUsage);
-      _addPoint(_ramHistory,     state.ramUsage);
-      _addPoint(_tempSocHistory, state.temperatureSoc);
-      _addPoint(_tempCpuHistory, state.temperatureCpu);
-      _addPoint(_tempGpuHistory, state.temperatureGpu);
-    });
-  }
-
-  void _addPoint(List<double> list, double value) {
-    list.add(value);
-    if (list.length > _maxPoints) list.removeAt(0);
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +28,7 @@ class _DeviceRealTimeMonitorViewState extends State<DeviceRealTimeMonitorView> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.device.deviceName,
+            Text(device.deviceName,
               style: const TextStyle(color: AppColors.charcoal, fontSize: 16, fontWeight: FontWeight.w900)),
             const Text('실시간 상태 모니터링',
               style: TextStyle(color: AppColors.lightGrey, fontSize: 11, fontWeight: FontWeight.w500)),
@@ -99,7 +48,7 @@ class _DeviceRealTimeMonitorViewState extends State<DeviceRealTimeMonitorView> {
               children: [
                 Icon(Icons.sensors, color: AppColors.brandingBlue, size: 13),
                 SizedBox(width: 4),
-                Text('5초 갱신', style: TextStyle(color: AppColors.brandingBlue, fontSize: 10, fontWeight: FontWeight.w800)),
+                Text('5초 갱신 (실시간)', style: TextStyle(color: AppColors.brandingBlue, fontSize: 10, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -109,72 +58,49 @@ class _DeviceRealTimeMonitorViewState extends State<DeviceRealTimeMonitorView> {
           child: Container(color: AppColors.borderLight, height: 1),
         ),
       ),
-      body: _latest == null
-          ? const Center(child: Column(
+      body: Consumer<DashboardViewModel>(
+        builder: (context, dashVM, child) {
+          final history = dashVM.deviceStateHistory[device.id] ?? [];
+          
+          if (history.isEmpty) {
+            return const Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircularProgressIndicator(color: AppColors.brandingBlue),
                 SizedBox(height: 16),
-                Text('장비 상태를 불러오는 중...', style: TextStyle(color: AppColors.lightGrey)),
+                Text('데이터를 수집하는 중...', style: TextStyle(color: AppColors.lightGrey)),
               ],
-            ))
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                // ── 현재값 요약 칩 ──────────────────────────────
-                _buildCurrentValueRow(),
-                const SizedBox(height: 20),
+            ));
+          }
 
-                // ── 그래프 6개 ───────────────────────────────────
-                _buildChartCard('CPU 사용률', _cpuHistory, Colors.green, '%', 100),
-                _buildChartCard('GPU 사용률', _gpuHistory, Colors.deepPurple, '%', 100),
-                _buildChartCard('RAM 사용률', _ramHistory, Colors.teal, '%', 100),
-                _buildChartCard('SoC 온도', _tempSocHistory, Colors.orange, '℃', 100),
-                _buildChartCard('CPU 온도', _tempCpuHistory, Colors.orangeAccent, '℃', 100),
-                _buildChartCard('GPU 온도', _tempGpuHistory, Colors.red, '℃', 100),
+          final latest = history.last;
 
-                // ── 추가 정보 (FPS, 모델, 카메라, 센서) ──────────
-                const SizedBox(height: 4),
-                _buildExtraInfoCard(),
-                const SizedBox(height: 20),
-              ],
-            ),
-    );
-  }
+          // 차트 데이터 변환
+          final cpuData = history.map((e) => e.cpuUsage).toList();
+          final gpuData = history.map((e) => e.gpuUsage).toList();
+          final ramData = history.map((e) => e.ramUsage).toList();
+          final tempSocData = history.map((e) => e.temperatureSoc).toList();
+          final tempCpuData = history.map((e) => e.temperatureCpu).toList();
+          final tempGpuData = history.map((e) => e.temperatureGpu).toList();
 
-  // 현재 값 요약 칩 2열 그리드
-  Widget _buildCurrentValueRow() {
-    final s = _latest!;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _chip('CPU 사용률', '${s.cpuUsage.toStringAsFixed(0)}%', Colors.green),
-        _chip('GPU 사용률', '${s.gpuUsage.toStringAsFixed(0)}%', Colors.deepPurple),
-        _chip('RAM 사용률', '${s.ramUsage.toStringAsFixed(0)}%', Colors.teal),
-        _chip('SoC 온도', '${s.temperatureSoc.toStringAsFixed(0)}℃', Colors.orange),
-        _chip('CPU 온도', '${s.temperatureCpu.toStringAsFixed(0)}℃', Colors.orangeAccent),
-        _chip('GPU 온도', '${s.temperatureGpu.toStringAsFixed(0)}℃', Colors.red),
-      ],
-    );
-  }
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // ── 그래프 6개 ───────────────────────────────────
+              _buildChartCard('CPU 사용률', cpuData, Colors.green, '%', 100),
+              _buildChartCard('GPU 사용률', gpuData, Colors.deepPurple, '%', 100),
+              _buildChartCard('RAM 사용률', ramData, Colors.teal, '%', 100),
+              _buildChartCard('SoC 온도', tempSocData, Colors.orange, '℃', 100),
+              _buildChartCard('CPU 온도', tempCpuData, Colors.orangeAccent, '℃', 100),
+              _buildChartCard('GPU 온도', tempGpuData, Colors.red, '℃', 100),
 
-  Widget _chip(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Text('$label  ', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-          Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900)),
-        ],
+              // ── 추가 정보 (FPS, 모델, 카메라, 센서) ──────────
+              const SizedBox(height: 4),
+              _buildExtraInfoCard(latest),
+              const SizedBox(height: 20),
+            ],
+          );
+        },
       ),
     );
   }
@@ -274,8 +200,7 @@ class _DeviceRealTimeMonitorViewState extends State<DeviceRealTimeMonitorView> {
   }
 
   // 추가 정보 카드 (FPS, 모델, 카메라, 센서)
-  Widget _buildExtraInfoCard() {
-    final s = _latest!;
+  Widget _buildExtraInfoCard(DeviceState s) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
