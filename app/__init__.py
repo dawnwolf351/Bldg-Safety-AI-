@@ -54,6 +54,7 @@ def create_app():
         from app.models.user import User
         from app.models.device import JetsonDevice
         from app.models.building import Building, Defect
+        from app.models.risk_assessment import RiskAssessment, Alert
         from app.models.device_state import DeviceState
         from app.models.safety_grade import SafetyGrade
         db.create_all()

@@ -38,6 +38,14 @@ class Defect(db.Model):
     image_url = db.Column(db.String(500), nullable=True)        # AI 촬영 결함 사진 경로
     comment = db.Column(db.Text, nullable=True)
     detection_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # --- Detection 테이블 기능 흡수 (AI 상세 분석 데이터) ---
+    confidence = db.Column(db.Float, nullable=True)             # 0.0 ~ 1.0 AI 확신도
+    bbox = db.Column(db.String(255), nullable=True)             # Bounding Box JSON 문자열
+    size_px = db.Column(db.Float, nullable=True)                # 면적 또는 두께
+    
+    # 1:1 관계 (하나의 결함은 하나의 위험도 평가를 가짐)
+    risk_assessment = db.relationship('RiskAssessment', backref='defect', uselist=False, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
