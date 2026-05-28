@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from app.extensions import db
 
 class DeviceState(db.Model):
     __tablename__ = 'device_states'

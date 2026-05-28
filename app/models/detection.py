@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from app.extensions import db
 
 # ==========================================
 # 1. 탐지 데이터 테이블 (원천 데이터)
