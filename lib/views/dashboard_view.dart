@@ -46,17 +46,22 @@ class _DashboardViewState extends State<DashboardView> {
     super.initState();
     // [로직 보존]: 화면이 로드되면 데이터 패치 시작
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<DashboardViewModel>(context, listen: false).fetchDashboardData();
+      final dashVM = Provider.of<DashboardViewModel>(context, listen: false);
+      dashVM.fetchDashboardData();
       final deviceVM = Provider.of<DeviceViewModel>(context, listen: false);
       deviceVM.fetchDevices().then((_) {
         if (!mounted) return;
-        // 기기 목록 로드 후 첫 번째 기기의 상태 정보 조회
-        if (deviceVM.devices.isNotEmpty) {
-          Provider.of<DashboardViewModel>(context, listen: false)
-            .fetchDeviceState(deviceVM.devices.first.id);
-        }
+        // 기기 목록 로드 후 전체 기기 상태 실시간 갱신 시작 (5초 주기)
+        dashVM.startAutoRefresh();
       });
     });
+  }
+
+  @override
+  void dispose() {
+    // 화면 벗어날 때 실시간 갱신 중지
+    Provider.of<DashboardViewModel>(context, listen: false).stopAutoRefresh();
+    super.dispose();
   }
 
   void _onBottomNavTapped(int index) {

@@ -638,14 +638,14 @@ class ApiService {
   // ==========================================
 
   // [Jetson 기기 상태(DeviceState) API]
-  // 백엔드 Swagger: GET /api/devices/<device_id>/state
+  // 백엔드 Swagger: GET /api/device-states/{device_id}
   // ==========================================
 
   // 17. 특정 기기의 최신 상태 정보 조회
   Future<DeviceState?> getDeviceState(int deviceId) async {
     debugPrint('🔍 [기기 상태] ID: $deviceId 조회');
     try {
-      final response = await _dio.get('/api/devices/$deviceId/state');
+      final response = await _dio.get('/api/device-states/$deviceId');
       if (response.statusCode == 200) {
         return DeviceState.fromJson(response.data);
       }
@@ -653,6 +653,22 @@ class ApiService {
     } catch (e) {
       debugPrint('🚨 HTTP getDeviceState Error: $e');
       return null;
+    }
+  }
+
+  // 17-1. 전체 장비 최신 상태 일괄 조회
+  Future<List<DeviceState>> getAllDeviceStates() async {
+    debugPrint('🔍 [전체 기기 상태] getAllDeviceStates 호출');
+    try {
+      final response = await _dio.get('/api/device-states/');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => DeviceState.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('🚨 HTTP getAllDeviceStates Error: $e');
+      return [];
     }
   }
 
