@@ -231,6 +231,35 @@ class DefectDetail(Resource):
         db.session.commit()
         return {"message": "결함 정보가 수정되었습니다.", "defect": defect.to_dict()}, HTTPStatus.OK
 
+    @defect_ns.expect(defect_model)
+    @defect_ns.doc(
+        description='결함 정보를 부분 수정합니다. (PATCH - 프론트엔드 호환용, PUT과 동일 동작)',
+        params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
+    )
+    @token_required
+    def patch(self, current_user, defect_id):
+        """결함 정보 부분 수정 (PATCH)"""
+        defect = Defect.query.get_or_404(defect_id)
+        data = request.get_json()
+
+        if 'comment' in data:
+            defect.comment = data['comment']
+        if 'severity' in data:
+            defect.severity = data['severity']
+        if 'defect_type' in data:
+            defect.defect_type = data['defect_type']
+        if 'image_url' in data:
+            defect.image_url = data['image_url']
+        if 'confidence' in data:
+            defect.confidence = data['confidence']
+        if 'bbox' in data:
+            defect.bbox = data['bbox']
+        if 'size_px' in data:
+            defect.size_px = data['size_px']
+
+        db.session.commit()
+        return {"message": "결함 정보가 수정되었습니다.", "defect": defect.to_dict()}, HTTPStatus.OK
+
     @defect_ns.doc(
         description='결함 이력을 삭제합니다. (관리자 레벨 2 이상)',
         params={'Authorization': {'in': 'header', 'description': 'Bearer {access_token}', 'required': True}}
