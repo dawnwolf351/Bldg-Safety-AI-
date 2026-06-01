@@ -125,7 +125,11 @@ class NotificationService {
         }
       } else {
         // 일반 경고: 1회 진동
-        await Vibration.vibrate(duration: Platform.isIOS ? null : 400);
+        if (Platform.isIOS) {
+          await Vibration.vibrate();
+        } else {
+          await Vibration.vibrate(duration: 400);
+        }
       }
     } catch (e) {
       debugPrint('진동 오류: $e');
