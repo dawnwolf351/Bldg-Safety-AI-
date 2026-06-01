@@ -66,7 +66,7 @@ class BuildingList(Resource):
 
         try:
             comp_date = datetime.strptime(data['completion_date'], '%Y-%m-%d').date() if data.get('completion_date') else None
-            new_building = Building(  # type: ignore
+            new_building = Building(
                 building_name=data['building_name'],
                 location=data['location'],
                 completion_date=comp_date
@@ -171,7 +171,7 @@ class DefectList(Resource):
             return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
 
         try:
-            new_defect = Defect(  # type: ignore
+            new_defect = Defect(
                 building_id=data['building_id'],
                 device_id=data['device_id'],
                 defect_type=data['defect_type'],
