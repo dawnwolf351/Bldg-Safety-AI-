@@ -639,8 +639,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
             surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('진단 이력 삭제', style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold)),
-            content: Text('이 ${defect.defectType} 결함 이력을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.',
-              style: const TextStyle(color: textLightGrey, height: 1.5)),
+            content: const Text('이 결함 이력을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.',
+              style: TextStyle(color: textLightGrey, height: 1.5)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
