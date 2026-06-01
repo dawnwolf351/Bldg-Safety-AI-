@@ -123,7 +123,9 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
 
                             // Device List or Empty State
                             if (devices.isEmpty)
-                              SizedBox(height: 250, child: _buildEmptyState())
+                              SizedBox(
+                                  height: 250,
+                                  child: _buildEmptyState())
                             else
                               Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -166,26 +168,19 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                               child: Consumer<BuildingViewModel>(
                                 builder: (context, buildingVM, child) {
                                   if (buildingVM.isLoading) {
-                                    return const Center(
-                                        child: CircularProgressIndicator(
-                                            color: brandingBlue));
+                                    return const Center(child: CircularProgressIndicator(color: brandingBlue));
                                   }
                                   if (buildingVM.buildings.isEmpty) {
                                     return const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 30),
-                                      child: Center(
-                                          child: Text('등록된 시설물이 없습니다.',
-                                              style: TextStyle(
-                                                  color: textLightGrey))),
+                                      padding: EdgeInsets.symmetric(vertical: 30),
+                                      child: Center(child: Text('등록된 시설물이 없습니다.', style: TextStyle(color: textLightGrey))),
                                     );
                                   }
                                   return Column(
                                     children: buildingVM.buildings.map((b) {
                                       // 점검 진행률은 건물이 추가될 때 기본 100% (또는 UI 유지용 임의값)
-                                      int progress = 100 - ((b.id % 3) * 15);
-                                      return _buildFacilityCard(
-                                          b.buildingName, progress);
+                                      int progress = 100 - ((b.id % 3) * 15); 
+                                      return _buildFacilityCard(b.buildingName, progress);
                                     }).toList(),
                                   );
                                 },
@@ -204,19 +199,17 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           ),
         ),
       ),
-      floatingActionButton:
-          Provider.of<AuthViewModel>(context).currentUser?.role != 'viewer'
-              ? FloatingActionButton(
-                  onPressed: () {
-                    _showAddDeviceModal(context);
-                  },
-                  backgroundColor: brandingBlue,
-                  elevation: 4, // 그림자
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: const Icon(Icons.add, color: Colors.white, size: 30),
-                )
-              : null, // admin이 아닐 경우 null 반환
+      floatingActionButton: Provider.of<AuthViewModel>(context).currentUser?.role != 'viewer' 
+        ? FloatingActionButton(
+            onPressed: () {
+                _showAddDeviceModal(context);
+              },
+              backgroundColor: brandingBlue,
+              elevation: 4, // 그림자
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add, color: Colors.white, size: 30),
+            )
+          : null, // admin이 아닐 경우 null 반환
     );
   }
 
@@ -230,7 +223,8 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderLight, width: 1.0),
+              border: Border.all(
+                  color: borderLight, width: 1.0),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -267,15 +261,14 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
         color: cardWhite,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              isPrimary ? highlightColor.withValues(alpha: 0.3) : borderLight,
+          color: isPrimary
+              ? highlightColor.withValues(alpha: 0.3)
+              : borderLight,
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-              color: isPrimary
-                  ? highlightColor.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.03),
+              color: isPrimary ? highlightColor.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.03),
               blurRadius: 16,
               spreadRadius: 0,
               offset: const Offset(0, 4))
@@ -315,13 +308,10 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
     );
   }
 
-  Widget _buildPremiumDeviceCard(
-      Device device, DeviceViewModel viewModel, BuildContext context) {
-    final String? userRole =
-        Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
+  Widget _buildPremiumDeviceCard(Device device, DeviceViewModel viewModel, BuildContext context) {
+    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
     final bool isOnline = device.isOnline;
-    final Color statusColor =
-        isOnline ? const Color(0xFF10B981) : redOffline; // 초록 or 빨강
+    final Color statusColor = isOnline ? const Color(0xFF10B981) : redOffline; // 초록 or 빨강
     final String statusText = isOnline ? 'Online' : 'Offline';
 
     return Dismissible(
@@ -335,15 +325,13 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        child: const Icon(Icons.delete_outline_rounded,
-            color: Colors.white, size: 32),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 32),
       ),
       confirmDismiss: (direction) async {
         if (userRole != 'admin' && userRole != 'super_admin') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('장치 삭제 권한이 없습니다.',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Text('장치 삭제 권한이 없습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
               backgroundColor: redOffline,
             ),
           );
@@ -355,20 +343,14 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           builder: (dialogContext) => AlertDialog(
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: borderLight)),
-            title: const Text('장치 삭제',
-                style: TextStyle(
-                    color: textCharcoal, fontWeight: FontWeight.bold)),
-            content: Text('${device.deviceName}을(를) 시스템에서 영구적으로 삭제하시겠습니까?',
-                style: const TextStyle(color: textLightGrey, height: 1.5)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: borderLight)),
+            title: const Text('장치 삭제', style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold)),
+            content: Text('${device.deviceName}을(를) 시스템에서 영구적으로 삭제하시겠습니까?', 
+              style: const TextStyle(color: textLightGrey, height: 1.5)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('취소',
-                    style: TextStyle(
-                        color: textLightGrey, fontWeight: FontWeight.bold)),
+                child: const Text('취소', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.bold)),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -378,33 +360,25 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: redOffline,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('삭제',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text('삭제', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
           ),
         );
-
+        
         if (confirmDelete) {
           final success = await viewModel.deleteDevice(device.id);
           if (!success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(viewModel.errorMessage ?? '장치 삭제에 실패했습니다.'),
-                  backgroundColor: redOffline),
+              SnackBar(content: Text(viewModel.errorMessage ?? '장치 삭제에 실패했습니다.'), backgroundColor: redOffline),
             );
             viewModel.clearError();
             return false;
           } else if (success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('장치가 성공적으로 삭제되었습니다.',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  backgroundColor: brandingBlue),
+              const SnackBar(content: Text('장치가 성공적으로 삭제되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
             );
             return true;
           }
@@ -477,7 +451,8 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                    color: statusColor, shape: BoxShape.circle),
+                                    color: statusColor,
+                                    shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 6),
                               Text(statusText,
@@ -543,10 +518,9 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                                 _showEditDeviceModal(context, device);
                               }),
                               const SizedBox(width: 8),
-                              _buildIconButton(
-                                  Icons.delete_outline_rounded, redOffline, () {
-                                _showDeleteConfirmDialog(
-                                    context, device, viewModel);
+                              _buildIconButton(Icons.delete_outline_rounded,
+                                  redOffline, () {
+                                _showDeleteConfirmDialog(context, device, viewModel);
                               }),
                             ],
                           ],
@@ -612,13 +586,18 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           const Text(
             '등록된 기기가 없어요!',
             style: TextStyle(
-                color: textCharcoal, fontSize: 18, fontWeight: FontWeight.bold),
+                color: textCharcoal,
+                fontSize: 18,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           const Text(
             '현장에 배치된 AI 단말기가 없습니다.\n아래의 + 버튼을 눌러 새 기기를 등록해 보세요.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: textLightGrey, fontSize: 14, height: 1.5),
+            style: TextStyle(
+                color: textLightGrey,
+                fontSize: 14,
+                height: 1.5),
           ),
         ],
       ),
@@ -643,7 +622,9 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           const Text(
             '오류가 발생했습니다',
             style: TextStyle(
-                color: textCharcoal, fontSize: 18, fontWeight: FontWeight.bold),
+                color: textCharcoal,
+                fontSize: 18,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Text(
@@ -687,8 +668,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                     fontWeight: FontWeight.bold),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: brandingBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -753,7 +733,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
@@ -763,12 +743,12 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black12, blurRadius: 20, spreadRadius: 5)
-                ]),
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 5)
+              ]
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,20 +780,20 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                     hint: 'ex) AI 안전 단말기 04호',
                     controller: nameController),
                 const SizedBox(height: 16),
-                StatefulBuilder(builder: (context, setState) {
-                  return _buildModalDropdownField(
-                    label: '섹션',
-                    value: locationController.text.isEmpty
-                        ? '본관'
-                        : locationController.text,
-                    items: ['본관', '수덕전', '효민갤러리', '정보공학관'],
-                    onChanged: (val) {
-                      setState(() {
-                        locationController.text = val!;
-                      });
-                    },
-                  );
-                }),
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    return _buildModalDropdownField(
+                      label: '섹션',
+                      value: locationController.text.isEmpty ? '본관' : locationController.text,
+                      items: ['본관', '수덕전', '효민갤러리', '정보공학관'],
+                      onChanged: (val) {
+                        setState(() {
+                          locationController.text = val!;
+                        });
+                      },
+                    );
+                  }
+                ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -839,13 +819,11 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                                 borderRadius: BorderRadius.circular(12)),
                             content: Row(
                               children: [
-                                const Icon(Icons.error_outline,
-                                    color: Colors.white),
+                                const Icon(Icons.error_outline, color: Colors.white),
                                 const SizedBox(width: 8),
                                 Expanded(
                                     child: Text(msg,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold))),
+                                        style: const TextStyle(fontWeight: FontWeight.bold))),
                               ],
                             ),
                             backgroundColor: redOffline,
@@ -859,8 +837,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) ||
-                          mac.length < 2) {
+                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) || mac.length < 2) {
                         showError('MAC 주소 형식이 올바르지 않습니다.');
                         return;
                       }
@@ -875,14 +852,10 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      final deviceViewModel =
-                          Provider.of<DeviceViewModel>(context, listen: false);
-                      final isDuplicateMac = deviceViewModel.devices.any((d) =>
-                          d.macAddress.toUpperCase() == mac.toUpperCase());
-                      final isDuplicateName = deviceViewModel.devices
-                          .any((d) => d.deviceName == name);
-                      final isDuplicateLocation = deviceViewModel.devices
-                          .any((d) => d.location == section);
+                      final deviceViewModel = Provider.of<DeviceViewModel>(context, listen: false);
+                      final isDuplicateMac = deviceViewModel.devices.any((d) => d.macAddress.toUpperCase() == mac.toUpperCase());
+                      final isDuplicateName = deviceViewModel.devices.any((d) => d.deviceName == name);
+                      final isDuplicateLocation = deviceViewModel.devices.any((d) => d.location == section);
 
                       if (isDuplicateMac) {
                         showError('이미 등록된 MAC 주소입니다.');
@@ -906,20 +879,17 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       }
 
                       if (!context.mounted) return;
-                      Provider.of<DeviceViewModel>(context, listen: false)
-                          .fetchDevices();
+                      Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
 
                       if (!context.mounted) return;
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           content: const Row(
                             children: [
-                              Icon(Icons.check_circle_rounded,
-                                  color: Colors.white),
+                              Icon(Icons.check_circle_rounded, color: Colors.white),
                               SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -973,12 +943,12 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black12, blurRadius: 20, spreadRadius: 5)
-                ]),
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 5)
+              ]
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1010,28 +980,29 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                     hint: 'ex) AI 안전 단말기 04호',
                     controller: nameController),
                 const SizedBox(height: 16),
-                StatefulBuilder(builder: (context, setState) {
-                  // 기기의 초기 위치가 목록에 없을 경우를 대비한 방어 코드
-                  String initialValue = locationController.text;
-                  List<String> options = ['본관', '수덕전', '효민갤러리', '정보공학관'];
-                  if (initialValue.isNotEmpty &&
-                      !options.contains(initialValue)) {
-                    options.add(initialValue);
-                  } else if (initialValue.isEmpty) {
-                    initialValue = '본관';
-                  }
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    // 기기의 초기 위치가 목록에 없을 경우를 대비한 방어 코드
+                    String initialValue = locationController.text;
+                    List<String> options = ['본관', '수덕전', '효민갤러리', '정보공학관'];
+                    if (initialValue.isNotEmpty && !options.contains(initialValue)) {
+                      options.add(initialValue);
+                    } else if (initialValue.isEmpty) {
+                      initialValue = '본관';
+                    }
 
-                  return _buildModalDropdownField(
-                    label: '섹션',
-                    value: initialValue,
-                    items: options,
-                    onChanged: (val) {
-                      setState(() {
-                        locationController.text = val!;
-                      });
-                    },
-                  );
-                }),
+                    return _buildModalDropdownField(
+                      label: '섹션',
+                      value: initialValue,
+                      items: options,
+                      onChanged: (val) {
+                        setState(() {
+                          locationController.text = val!;
+                        });
+                      },
+                    );
+                  }
+                ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -1049,29 +1020,21 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                           SnackBar(
                             content: Row(
                               children: [
-                                const Icon(Icons.error_outline,
-                                    color: Colors.white),
+                                const Icon(Icons.error_outline, color: Colors.white),
                                 const SizedBox(width: 8),
-                                Expanded(
-                                    child: Text(msg,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white))),
+                                Expanded(child: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
                               ],
                             ),
                             backgroundColor: redOffline,
                             behavior: SnackBarBehavior.floating,
                             margin: EdgeInsets.only(
-                                bottom:
-                                    MediaQuery.of(context).size.height * 0.8,
-                                left: 20,
-                                right: 20),
+                                bottom: MediaQuery.of(context).size.height * 0.8,
+                                left: 20, right: 20),
                           ),
                         );
                       }
 
-                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) ||
-                          mac.length < 2) {
+                      if (!RegExp(r'^[a-zA-Z0-9:\- ]+$').hasMatch(mac) || mac.length < 2) {
                         showError('MAC 주소 형식이 올바르지 않습니다.');
                         return;
                       }
@@ -1086,8 +1049,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      final success = await ApiService()
-                          .updateJetsonDevice(device.id, mac, name, section);
+                      final success = await ApiService().updateJetsonDevice(device.id, mac, name, section);
 
                       if (!success) {
                         showError('서버 오류: 장치 정보를 수정하지 못했습니다.');
@@ -1095,8 +1057,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                       }
 
                       if (!context.mounted) return;
-                      Provider.of<DeviceViewModel>(context, listen: false)
-                          .fetchDevices();
+                      Provider.of<DeviceViewModel>(context, listen: false).fetchDevices();
 
                       if (!context.mounted) return;
                       Navigator.pop(context);
@@ -1106,9 +1067,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                             children: [
                               Icon(Icons.check_circle, color: Colors.white),
                               SizedBox(width: 8),
-                              Text('단말기 정보가 성공적으로 수정되었습니다!',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                              Text('단말기 정보가 성공적으로 수정되었습니다!', style: TextStyle(fontWeight: FontWeight.bold)),
                             ],
                           ),
                           backgroundColor: brandingBlue,
@@ -1193,61 +1152,42 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
         DropdownButtonFormField<String>(
           initialValue: items.contains(value) ? value : null,
           icon: const Icon(Icons.arrow_drop_down, color: textLightGrey),
-          style: const TextStyle(
-              color: textCharcoal,
-              fontSize: 15,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w500),
+          style: const TextStyle(color: textCharcoal, fontSize: 15, fontFamily: 'Pretendard', fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled: true,
             fillColor: bgOffWhite,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: borderLight, width: 1)),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: borderLight, width: 1)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: brandingBlue, width: 2)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: borderLight, width: 1)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: borderLight, width: 1)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: brandingBlue, width: 2)),
           ),
-          items: items
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: onChanged,
         ),
       ],
     );
   }
 
-  void _showDeleteConfirmDialog(
-      BuildContext parentContext, Device device, DeviceViewModel viewModel) {
+  void _showDeleteConfirmDialog(BuildContext parentContext, Device device, DeviceViewModel viewModel) {
     showDialog(
       context: parentContext,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: borderLight)),
-        title: const Text('장치 삭제',
-            style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold)),
-        content: Text('${device.deviceName}을(를) 시스템에서 영구적으로 삭제하시겠습니까?',
-            style: const TextStyle(color: textLightGrey, height: 1.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: borderLight)),
+        title: const Text('장치 삭제', style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold)),
+        content: Text('${device.deviceName}을(를) 시스템에서 영구적으로 삭제하시겠습니까?', 
+          style: const TextStyle(color: textLightGrey, height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소',
-                style: TextStyle(
-                    color: textLightGrey, fontWeight: FontWeight.bold)),
+            child: const Text('취소', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
               final success = await viewModel.deleteDevice(device.id);
-
+              
               if (!success && parentContext.mounted) {
                 ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
@@ -1259,8 +1199,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
               } else if (success && parentContext.mounted) {
                 ScaffoldMessenger.of(parentContext).showSnackBar(
                   const SnackBar(
-                    content: Text('장치가 성공적으로 삭제되었습니다.',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    content: Text('장치가 성공적으로 삭제되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
                     backgroundColor: brandingBlue,
                   ),
                 );
@@ -1269,12 +1208,9 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: redOffline,
               elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('삭제',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white)),
+            child: const Text('삭제', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ],
       ),

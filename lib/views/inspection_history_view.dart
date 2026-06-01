@@ -80,11 +80,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                   final filteredList = viewModel.defects.where((defect) {
                     if (_selectedFilter == '전체') return true;
                     if (_selectedFilter == '위험' &&
-                        defect.statusCode == 'CRITICAL') return true;
-                    if (_selectedFilter == '주의' &&
-                        defect.statusCode == 'WARNING') return true;
-                    if (_selectedFilter == '양호' && defect.statusCode == 'SAFE')
+                        defect.statusCode == 'CRITICAL') {
                       return true;
+                    }
+                    if (_selectedFilter == '주의' &&
+                        defect.statusCode == 'WARNING') {
+                      return true;
+                    }
+                    if (_selectedFilter == '양호' && defect.statusCode == 'SAFE') {
+                      return true;
+                    }
                     return false;
                   }).toList();
 
@@ -193,8 +198,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 Navigator.pop(ctx);
                 final picked = await picker.pickImage(
                     source: ImageSource.gallery, imageQuality: 80);
-                if (picked != null)
+                if (picked != null) {
                   dialogSetState(() => _pickedImageFile = File(picked.path));
+                }
               },
             ),
             ListTile(
@@ -208,8 +214,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 Navigator.pop(ctx);
                 final picked = await picker.pickImage(
                     source: ImageSource.camera, imageQuality: 80);
-                if (picked != null)
+                if (picked != null) {
                   dialogSetState(() => _pickedImageFile = File(picked.path));
+                }
               },
             ),
             const SizedBox(height: 8),
@@ -393,8 +400,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           );
                         }).toList(),
                         onChanged: (v) {
-                          if (v != null)
+                          if (v != null) {
                             dialogSetState(() => selectedBuildingId = v);
+                          }
                         },
                       ),
                       const SizedBox(height: 12),
@@ -412,8 +420,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           );
                         }).toList(),
                         onChanged: (v) {
-                          if (v != null)
+                          if (v != null) {
                             dialogSetState(() => selectedDeviceId = v);
+                          }
                         },
                       ),
                       const SizedBox(height: 12),
@@ -449,8 +458,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                               value: 'E', child: Text('E (불량 / 매우 위험)')),
                         ],
                         onChanged: (v) {
-                          if (v != null)
+                          if (v != null) {
                             dialogSetState(() => selectedSeverity = v);
+                          }
                         },
                       ),
                       const SizedBox(height: 12),
@@ -1023,13 +1033,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
   // 결함 타입에 따라 아이콘 반환
   IconData _getDefectIcon(String defectType) {
     final lower = defectType.toLowerCase();
-    if (lower.contains('화재') || lower.contains('fire'))
+    if (lower.contains('화재') || lower.contains('fire')) {
       return Icons.local_fire_department;
-    if (lower.contains('균열') || lower.contains('crack'))
+    }
+    if (lower.contains('균열') || lower.contains('crack')) {
       return Icons.broken_image;
+    }
     if (lower.contains('박리') || lower.contains('spalling')) return Icons.layers;
-    if (lower.contains('부식') || lower.contains('corrosion'))
+    if (lower.contains('부식') || lower.contains('corrosion')) {
       return Icons.water_damage;
+    }
     return Icons.warning_amber;
   }
 }
