@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/defect.dart';
 import '../models/building.dart';
@@ -483,6 +485,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
   void _showEditDefectModal(BuildContext context, Defect currentDefect) {
     TextEditingController editTypeCtrl = TextEditingController(text: currentDefect.defectType);
     TextEditingController editCommentCtrl = TextEditingController(text: currentDefect.comment ?? '');
+    File? pickedImageFile;
 
     // 기존 심각도 값을 A~E로 매핑
     String currentSev = currentDefect.severity?.toUpperCase() ?? 'A';
@@ -540,6 +543,111 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                           onPressed: () => Navigator.pop(ctx),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 사진 첨부 (선택) - 현재 이미지 또는 새로 고른 이미지
+                    GestureDetector(
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        showModalBottomSheet(
+                          context: ctx,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                          builder: (modalCtx) => SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 8),
+                                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                                const SizedBox(height: 16),
+                                ListTile(
+                                  leading: const CircleAvatar(backgroundColor: Color(0xFFEEF2FF), child: Icon(Icons.photo_library_outlined, color: brandingBlue)),
+                                  title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
+                                  onTap: () async {
+                                    Navigator.pop(modalCtx);
+                                    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                                    if (picked != null) setModalState(() => pickedImageFile = File(picked.path));
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const CircleAvatar(backgroundColor: Color(0xFFFFF0F0), child: Icon(Icons.camera_alt_outlined, color: Colors.redAccent)),
+                                  title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
+                                  onTap: () async {
+                                    Navigator.pop(modalCtx);
+                                    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                                    if (picked != null) setModalState(() => pickedImageFile = File(picked.path));
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        height: 140,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: bgOffWhite,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: borderLight),
+                        ),
+                        child: pickedImageFile != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Image.file(pickedImageFile!, fit: BoxFit.cover),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: GestureDetector(
+                                        onTap: () => setModalState(() => pickedImageFile = null),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : (currentDefect.imageUrl != null && currentDefect.imageUrl!.isNotEmpty)
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.network(currentDefect.imageUrl!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.broken_image, color: textLightGrey, size: 40)),
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: GestureDetector(
+                                            onTap: () {}, // 기존 이미지를 지우진 않고 덮어씌움 안내
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                              child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_photo_alternate_outlined, color: brandingBlue.withValues(alpha: 0.5), size: 40),
+                                      const SizedBox(height: 8),
+                                      const Text('사진 첨부 (선택)', style: TextStyle(color: textLightGrey, fontSize: 13)),
+                                      const SizedBox(height: 4),
+                                      Text('갤러리 또는 카메라', style: TextStyle(color: brandingBlue.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                      ),
                     ),
                     const SizedBox(height: 24),
 
@@ -645,6 +753,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                             defectType: editTypeCtrl.text.trim().isEmpty ? '알 수 없음' : editTypeCtrl.text.trim(),
                             severity: selectedSeverity,
                             comment: editCommentCtrl.text.trim(),
+                            imageFilePath: pickedImageFile?.path,
                           );
                           
                           if (!mounted) return;

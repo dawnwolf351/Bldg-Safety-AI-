@@ -1,9 +1,12 @@
-from flask import request
+from flask import request, current_app
 from flask_restx import Namespace, Resource, fields
 from datetime import datetime
 from app.extensions import db
 from app.services.auth_service import token_required
 from http import HTTPStatus
+import os
+import time
+from werkzeug.utils import secure_filename
 
 # 핵심 수정: Building과 Defect 모델을 합쳐진 하나의 파일에서 동시에 가져옵니다!
 from app.models.building import Building, Defect
@@ -215,7 +218,20 @@ class DefectDetail(Resource):
         if defect.confidence is not None:
             return {"error": "AI가 자동 탐지한 결함은 수정할 수 없습니다."}, HTTPStatus.FORBIDDEN
 
-        data = request.get_json()
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            data = request.form.to_dict()
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'defects')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    filename = secure_filename(file.filename)
+                    filename = f"{int(time.time())}_{filename}"
+                    file_path = os.path.join(upload_folder, filename)
+                    file.save(file_path)
+                    defect.image_url = f"/static/uploads/defects/{filename}"
+        else:
+            data = request.get_json()
 
         if 'comment' in data:
             defect.comment = data['comment']

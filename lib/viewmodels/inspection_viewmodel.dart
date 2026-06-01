@@ -170,12 +170,14 @@ class InspectionViewModel extends ChangeNotifier {
     String? defectType,
     String? severity,
     String? comment,
+    String? imageFilePath,
   }) async {
     final success = await ApiService().updateDefect(
       defectId: defectId,
       defectType: defectType,
       severity: severity,
       comment: comment,
+      imageFilePath: imageFilePath,
     );
     if (success) {
       await fetchDefects(); // 새로고침

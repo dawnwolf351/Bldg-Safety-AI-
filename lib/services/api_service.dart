@@ -641,15 +641,29 @@ class ApiService {
     String? defectType,
     String? severity,
     String? comment,
+    String? imageFilePath,
   }) async {
     try {
-      final Map<String, dynamic> data = {};
-      if (defectType != null) data['defect_type'] = defectType;
-      if (severity != null) data['severity'] = severity;
-      if (comment != null) data['comment'] = comment;
+      if (imageFilePath != null && imageFilePath.isNotEmpty) {
+        // 이미지 있는 경우 multipart/form-data 전송
+        final formData = FormData.fromMap({
+          if (defectType != null) 'defect_type': defectType,
+          if (severity != null) 'severity': severity,
+          if (comment != null) 'comment': comment,
+          'image': await MultipartFile.fromFile(imageFilePath, filename: imageFilePath.split('/').last),
+        });
+        final response = await _dio.put('/api/defects/$defectId', data: formData);
+        return response.statusCode == 200;
+      } else {
+        // 이미지 없는 경우 JSON 전송
+        final Map<String, dynamic> data = {};
+        if (defectType != null) data['defect_type'] = defectType;
+        if (severity != null) data['severity'] = severity;
+        if (comment != null) data['comment'] = comment;
 
-      final response = await _dio.put('/api/defects/$defectId', data: data);
-      return response.statusCode == 200;
+        final response = await _dio.put('/api/defects/$defectId', data: data);
+        return response.statusCode == 200;
+      }
     } catch (e) {
       debugPrint('🚨 HTTP updateDefect Error: $e');
       return false;
