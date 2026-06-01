@@ -285,13 +285,102 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                             isEmergency: true,
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('조치 완료 마킹 처리가 완료되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
-                              backgroundColor: _greenSafe,
+                          // showDialog(await) 이전에 context 의존 객체 모두 캡처
+                          final vm = Provider.of<InspectionViewModel>(
+                              context, listen: false);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(context);
+
+                          // 조치 완료 확인 다이얼로그
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogCtx) => AlertDialog(
+                              backgroundColor: Colors.white,
+                              surfaceTintColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: const BorderSide(color: borderLight)),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.check_circle_outline,
+                                      color: Color(0xFF34C759), size: 22),
+                                  SizedBox(width: 8),
+                                  Text('조치 완료 확인',
+                                      style: TextStyle(
+                                          color: textCharcoal,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              content: Text(
+                                '"${defect.defectType}" 결함을 조치 완료 처리하면\n목록에서 삭제되며 복구할 수 없습니다.\n계속하시겠습니까?',
+                                style: const TextStyle(
+                                    color: textLightGrey,
+                                    height: 1.5,
+                                    fontSize: 13),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogCtx, false),
+                                  child: const Text('취소',
+                                      style: TextStyle(
+                                          color: textLightGrey,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogCtx, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _greenSafe,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                  ),
+                                  child: const Text('조치 완료',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
                             ),
                           );
-                          Navigator.pop(context); // 이전 화면으로 복귀
+
+                          if (confirmed != true) return;
+                          if (!mounted) return;
+
+                          final success =
+                              await vm.deleteDefect(defect.defectId);
+
+                          if (!mounted) return;
+
+                          if (success) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '✅ 조치가 완료되어 결함 이력에서 삭제되었습니다.',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                backgroundColor: Color(0xFF34C759),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            navigator.pop(); // 이전 목록 화면으로 복귀
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    vm.errorMessage ??
+                                        '❌ 조치 완료 처리에 실패했습니다. 다시 시도해 주세요.',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                backgroundColor: _redEmergency,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            vm.clearError();
+                          }
                         }
                       },
                       icon: Icon(isCritical ? Icons.notifications_active : Icons.check_circle_outline, size: 20),
