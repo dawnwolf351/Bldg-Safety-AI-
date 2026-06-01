@@ -149,7 +149,7 @@ class InspectionViewModel extends ChangeNotifier {
     }
   }
 
-  // 기존 결함 코멘트 수정 후 모델 즉시 갱신
+  // 기존 결함 코멘트 수정 후 모델 즉시 갱신 (단순 패치)
   Future<bool> updateDefectComment(int defectId, String newComment) async {
     final success = await ApiService().updateDefectComment(defectId, newComment);
     if (success) {
@@ -162,5 +162,28 @@ class InspectionViewModel extends ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  // 사용자 수동 결함 전체 수정 (PUT)
+  Future<bool> updateDefect({
+    required int defectId,
+    String? defectType,
+    String? severity,
+    String? comment,
+  }) async {
+    final success = await ApiService().updateDefect(
+      defectId: defectId,
+      defectType: defectType,
+      severity: severity,
+      comment: comment,
+    );
+    if (success) {
+      await fetchDefects(); // 새로고침
+      return true;
+    } else {
+      _errorMessage = '결함 이력을 수정하는데 실패했습니다.';
+      notifyListeners();
+      return false;
+    }
   }
 }

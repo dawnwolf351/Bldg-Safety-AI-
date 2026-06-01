@@ -635,6 +635,27 @@ class ApiService {
     }
   }
 
+  // 사용자 수동 결함 전체 수정 (PUT)
+  Future<bool> updateDefect({
+    required int defectId,
+    String? defectType,
+    String? severity,
+    String? comment,
+  }) async {
+    try {
+      final Map<String, dynamic> data = {};
+      if (defectType != null) data['defect_type'] = defectType;
+      if (severity != null) data['severity'] = severity;
+      if (comment != null) data['comment'] = comment;
+
+      final response = await _dio.put('/api/defects/$defectId', data: data);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🚨 HTTP updateDefect Error: $e');
+      return false;
+    }
+  }
+
   // ==========================================
 
   // [Jetson 기기 상태(DeviceState) API]

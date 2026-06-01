@@ -79,6 +79,15 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
           style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.5),
         ),
         centerTitle: true,
+        actions: [
+          // AI 자동 탐지(confidence != null)가 아닌 수동 추가 결함만 수정 가능
+          if (defect.confidence == null)
+            TextButton.icon(
+              onPressed: () => _showEditDefectModal(context, defect),
+              icon: const Icon(Icons.edit_note, color: brandingBlue, size: 20),
+              label: const Text('수정', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold)),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -468,6 +477,208 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     }
     // 건물이 없거나 지오코딩 실패 시 null 반환
     return null;
+  }
+
+  /* =========== 수동 추가 결함 수정 모달 =========== */
+  void _showEditDefectModal(BuildContext context, Defect currentDefect) {
+    String selectedType = currentDefect.defectType;
+    String selectedSeverity = currentDefect.severity ?? '경미';
+    TextEditingController editCommentCtrl = TextEditingController(text: currentDefect.comment ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              margin: EdgeInsets.only(
+                top: 40,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 헤더
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '결함 이력 수정',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: textCharcoal,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: textLightGrey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 결함 유형 선택
+                    const Text('결함 유형', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: borderLight),
+                        borderRadius: BorderRadius.circular(12),
+                        color: bgOffWhite,
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedType,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down, color: textLightGrey),
+                          items: ['균열', '박리', '누수', '파손', '화재', '기타'].map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value, style: const TextStyle(fontSize: 15, color: textCharcoal)),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            if (newValue != null) {
+                              setModalState(() => selectedType = newValue);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 심각도 선택
+                    const Text('심각도', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: ['경미', '주의', '심각'].map((level) {
+                        bool isSelected = selectedSeverity == level;
+                        Color levelColor = level == '심각' ? _redEmergency : (level == '주의' ? _orangeWarning : _greenSafe);
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => setModalState(() => selectedSeverity = level),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isSelected ? levelColor.withValues(alpha: 0.1) : cardWhite,
+                                border: Border.all(color: isSelected ? levelColor : borderLight),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  level,
+                                  style: TextStyle(
+                                    color: isSelected ? levelColor : textLightGrey,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 메모 입력
+                    const Text('메모 (선택)', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: editCommentCtrl,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 15, color: textCharcoal),
+                      decoration: InputDecoration(
+                        hintText: '결함에 대한 추가 설명을 입력하세요.',
+                        hintStyle: const TextStyle(color: textLightGrey, fontSize: 14),
+                        filled: true,
+                        fillColor: bgOffWhite,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: brandingBlue, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // 수정 완료 버튼
+                    SizedBox(
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final vm = Provider.of<InspectionViewModel>(context, listen: false);
+                          final nav = Navigator.of(context);
+                          final messenger = ScaffoldMessenger.of(context);
+                          
+                          // 수정 API 호출 (PUT)
+                          bool success = await vm.updateDefect(
+                            defectId: currentDefect.defectId,
+                            defectType: selectedType,
+                            severity: selectedSeverity,
+                            comment: editCommentCtrl.text.trim(),
+                          );
+                          
+                          if (!mounted) return;
+                          
+                          if (success) {
+                            nav.pop(); // 모달 닫기
+                            nav.pop(); // 기존 상세 화면도 닫고 목록으로 복귀(새로고침 반영)
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ 결함 정보가 성공적으로 수정되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
+                                backgroundColor: Color(0xFF34C759),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(vm.errorMessage ?? '❌ 수정 실패', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                backgroundColor: const Color(0xFFFF3B30),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: brandingBlue,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text('수정 완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   /* =========== 위치 정보 탭 모듈 =========== */
