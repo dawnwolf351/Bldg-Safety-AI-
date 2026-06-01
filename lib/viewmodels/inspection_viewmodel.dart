@@ -4,6 +4,7 @@ import '../models/defect.dart';
 import '../services/api_service.dart';
 import '../utils/globals.dart';
 import '../utils/alert_utils.dart';
+import '../services/notification_service.dart';
 
 /// 진단 이력(결함) 데이터를 관리하는 ViewModel
 /// DeviceViewModel과 동일한 패턴 (폴링, 에러 처리, CRUD)
@@ -47,6 +48,15 @@ class InspectionViewModel extends ChangeNotifier {
 
         // 만약 새로운 E등급(CRITICAL) 결함이 감지되었다면 실시간으로 알림 팝업 띄우기
         if (hasNewCritical) {
+          final newCritical = newDefects.firstWhere((d) => d.statusCode == 'CRITICAL');
+
+          // iOS 시스템 알림 즈시 발송 (설정 권한 무관하게 일단 발송)
+          await NotificationService().showEmergencyNotification(
+            title: '🚨 긴급 위험 감지!',
+            body: '[${newCritical.defectType}] ${newCritical.severity ?? "심각"} 등급 결함이 자동 탐지되었습니다. 즉각 확인하세요.',
+          );
+
+          // 앱 내 팝업도 동시에 표시
           final context = globalNavKey.currentContext;
           if (context != null && context.mounted) {
             EmergencyAlert.show(context);

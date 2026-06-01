@@ -8,6 +8,8 @@ import '../viewmodels/building_viewmodel.dart';
 import '../viewmodels/inspection_viewmodel.dart';
 import '../services/report_service.dart';
 import '../utils/alert_utils.dart';
+import '../services/notification_service.dart';
+import '../viewmodels/settings_viewmodel.dart';
 
 class InspectionDetailView extends StatefulWidget {
   final Defect defect;
@@ -267,9 +269,21 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                   Expanded(
                     flex: 1,
                     child: ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         if (isCritical) {
+                          // 1. 앱 내 긴급 팝업 + 사이렌 실행 (기존 로직 유지)
                           EmergencyAlert.show(context);
+
+                          // 2. 실제 아이폰 시스템 알림 발송
+                          final settingsVm = Provider.of<SettingsViewModel>(context, listen: false);
+                          await NotificationService().triggerAlert(
+                            pushEnabled: settingsVm.pushNotifications,
+                            soundVibrationEnabled: settingsVm.soundVibration,
+                            doNotDisturbEnabled: settingsVm.doNotDisturb,
+                            title: '🚨 긴급 위험 감지!',
+                            body: '[${defect.defectType}] ${defect.severity ?? "심각"} 등급 결함이 탐지되었습니다. 즉각 대응이 필요합니다.',
+                            isEmergency: true,
+                          );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
