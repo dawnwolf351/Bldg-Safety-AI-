@@ -79,5 +79,9 @@
 	</array>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>치명적 구조 결함 발견 시 즉시 알림을 보내기 위해 알림 권한이 필요합니다.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>현장에서 발견된 건축물 결함(균열 등) 사진을 직접 촬영하여 등록하기 위해 카메라 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>미리 촬영해 둔 건축물 결함 사진을 기기에서 선택하여 앱에 등록하기 위해 갤러리 접근 권한이 필요합니다.</string>
 </dict>
 </plist>
