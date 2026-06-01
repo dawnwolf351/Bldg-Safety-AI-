@@ -13,6 +13,9 @@ class Role(db.Model):
     # Role ↔ User 관계 설정
     users = db.relationship('User', backref='role_info', lazy=True)
 
+    def __init__(self, **kwargs):
+        super(Role, self).__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,

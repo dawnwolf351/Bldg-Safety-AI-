@@ -9,6 +9,9 @@ class SafetyGrade(db.Model):
     state = db.Column(db.String(50), nullable=False)       # 예: 문제없음, 경미한 결함
     description = db.Column(db.Text, nullable=False)       # 기준 요약 설명
 
+    def __init__(self, **kwargs):
+        super(SafetyGrade, self).__init__(**kwargs)
+
     def to_dict(self):
         return {
             "grade": self.grade,

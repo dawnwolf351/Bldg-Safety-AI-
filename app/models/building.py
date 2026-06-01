@@ -14,8 +14,8 @@ class Building(db.Model):
     # 건물과 결함은 1:N 관계
     defects = db.relationship('Defect', backref='building', lazy=True)
 
-    def __init__(self, building_name=None, location=None, completion_date=None, **kwargs):
-        super().__init__(building_name=building_name, location=location, completion_date=completion_date, **kwargs)
+    def __init__(self, **kwargs):
+        super(Building, self).__init__(**kwargs)
 
     def to_dict(self):
         return {
@@ -50,8 +50,8 @@ class Defect(db.Model):
     # 1:1 관계 (하나의 결함은 하나의 위험도 평가를 가짐)
     risk_assessment = db.relationship('RiskAssessment', backref='defect', uselist=False, cascade="all, delete-orphan")
 
-    def __init__(self, building_id=None, device_id=None, defect_type=None, severity=None, image_url=None, comment=None, confidence=None, bbox=None, size_px=None, **kwargs):
-        super().__init__(building_id=building_id, device_id=device_id, defect_type=defect_type, severity=severity, image_url=image_url, comment=comment, confidence=confidence, bbox=bbox, size_px=size_px, **kwargs)
+    def __init__(self, **kwargs):
+        super(Defect, self).__init__(**kwargs)
 
     def to_dict(self):
         return {

@@ -17,6 +17,9 @@ class JetsonDevice(db.Model):
     # users 테이블의 id를 참조 (관리자가 먼저 등록할 수 있으므로 nullable=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
+    def __init__(self, **kwargs):
+        super(JetsonDevice, self).__init__(**kwargs)
+
     def to_dict(self):
         return {
             "device_id": self.device_id,

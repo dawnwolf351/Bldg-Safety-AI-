@@ -23,6 +23,9 @@ class Detection(db.Model):
     risk_assessment = db.relationship('RiskAssessment', backref='detection', uselist=False,
                                       cascade="all, delete-orphan")
 
+    def __init__(self, **kwargs):
+        super(Detection, self).__init__(**kwargs)
+
 
 # ==========================================
 # 2. 위험도 평가 테이블 (비즈니스 로직)
@@ -41,6 +44,9 @@ class RiskAssessment(db.Model):
     # 1:N 관계 (하나의 위험도 평가로 인해 슬랙, 대시보드 등 여러 알림이 발생할 수 있음)
     alerts = db.relationship('Alert', backref='risk_assessment', lazy=True, cascade="all, delete-orphan")
 
+    def __init__(self, **kwargs):
+        super(RiskAssessment, self).__init__(**kwargs)
+
 
 # ==========================================
 # 3. 알림 이력 테이블 (액션 및 조치)
@@ -56,3 +62,6 @@ class Alert(db.Model):
 
     sent_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     ack_at = db.Column(db.DateTime, nullable=True)  # 관리자 확인 시각
+
+    def __init__(self, **kwargs):
+        super(Alert, self).__init__(**kwargs)

@@ -138,54 +138,6 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                                 ),
                               ),
 
-                            const SizedBox(height: 32),
-
-                            // Facility List Header
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20.0),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.build_circle_outlined,
-                                      color: brandingBlue, size: 22),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '시설물 리스트',
-                                    style: TextStyle(
-                                        color: textCharcoal,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Facility Cards (실제 데이터 연동)
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20.0),
-                              child: Consumer<BuildingViewModel>(
-                                builder: (context, buildingVM, child) {
-                                  if (buildingVM.isLoading) {
-                                    return const Center(child: CircularProgressIndicator(color: brandingBlue));
-                                  }
-                                  if (buildingVM.buildings.isEmpty) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 30),
-                                      child: Center(child: Text('등록된 시설물이 없습니다.', style: TextStyle(color: textLightGrey))),
-                                    );
-                                  }
-                                  return Column(
-                                    children: buildingVM.buildings.map((b) {
-                                      // 점검 진행률은 건물이 추가될 때 기본 100% (또는 UI 유지용 임의값)
-                                      int progress = 100 - ((b.id % 3) * 15); 
-                                      return _buildFacilityCard(b.buildingName, progress);
-                                    }).toList(),
-                                  );
-                                },
-                              ),
-                            ),
 
                             const SizedBox(height: 100), // FAB 여백
                           ],
@@ -239,7 +191,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
           const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('장치 및 시설물 관리',
+              Text('장치 관리',
                   style: TextStyle(
                       fontFamily: 'Pretendard',
                       color: textCharcoal,
@@ -638,92 +590,6 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
     );
   }
 
-  Widget _buildFacilityCard(String buildingName, int progressPct) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderLight, width: 1.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            offset: const Offset(0, 4),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                buildingName,
-                style: const TextStyle(
-                    color: textCharcoal,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: brandingBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '안전 점검 진행률',
-                  style: TextStyle(
-                      color: brandingBlue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '진행 상태',
-                style: TextStyle(
-                    color: textLightGrey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
-              ),
-              Text(
-                '$progressPct%',
-                style: const TextStyle(
-                    color: brandingBlue,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: progressPct / 100.0),
-              duration: const Duration(milliseconds: 1500),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return LinearProgressIndicator(
-                  value: value,
-                  minHeight: 8,
-                  backgroundColor: borderLight,
-                  valueColor: const AlwaysStoppedAnimation<Color>(brandingBlue),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ============== 신규 장치 등록 모달 UI ==============
   void _showAddDeviceModal(BuildContext context) {

@@ -34,6 +34,9 @@ class DeviceState(db.Model):
     camera_status = db.Column(db.String(50), nullable=True)  # 예: 'OK', 'ERROR', 'DISCONNECTED'
     depth_sensor_status = db.Column(db.String(50), nullable=True)  # S100D 상태
 
+    def __init__(self, **kwargs):
+        super(DeviceState, self).__init__(**kwargs)
+
     def to_dict(self):
         return {
             "id": self.id,
