@@ -168,7 +168,11 @@ class DefectList(Resource):
     )
     @token_required
     def post(self, current_user):
-        """결함 정보 등록 (모든 인증된 사용자 가능)"""
+        """결함 정보 등록 (모든 인증된 사용자 가능 -> 관리자 레벨 2 이상으로 변경)"""
+        user_level = current_user.role_info.level if current_user.role_info else 3
+        if user_level > 2:
+            return {"error": "접근 거부: 결함 이력 등록은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
+
         data = request.get_json()
         if not data:
             return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
@@ -212,7 +216,11 @@ class DefectDetail(Resource):
     )
     @token_required
     def put(self, current_user, defect_id):
-        """결함 정보 수정 (모든 인증된 사용자 가능)"""
+        """결함 정보 수정 (관리자 레벨 2 이상)"""
+        user_level = current_user.role_info.level if current_user.role_info else 3
+        if user_level > 2:
+            return {"error": "접근 거부: 결함 이력 수정은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
+
         defect = Defect.query.get_or_404(defect_id)
 
         if defect.confidence is not None:
@@ -273,7 +281,11 @@ class DefectDetail(Resource):
     )
     @token_required
     def patch(self, current_user, defect_id):
-        """결함 메모 수정"""
+        """결함 메모 수정 (관리자 레벨 2 이상)"""
+        user_level = current_user.role_info.level if current_user.role_info else 3
+        if user_level > 2:
+            return {"error": "접근 거부: 결함 이력 메모 수정은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
+
         defect = Defect.query.get_or_404(defect_id)
         
         if defect.confidence is not None:

@@ -12,6 +12,7 @@ import '../services/report_service.dart';
 import '../utils/alert_utils.dart';
 import '../services/notification_service.dart';
 import '../viewmodels/settings_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 
 class InspectionDetailView extends StatefulWidget {
   final Defect defect;
@@ -62,6 +63,9 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     bool isWarning = defect.statusCode == 'WARNING';
     Color statusColor = isCritical ? _redEmergency : (isWarning ? _orangeWarning : _greenSafe);
 
+    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
+    final bool canEditOrDelete = userRole == 'admin' || userRole == 'super_admin';
+
     // 날짜 포맷팅
     String dateStr = '${defect.detectionTime.year}-${defect.detectionTime.month.toString().padLeft(2, '0')}-${defect.detectionTime.day.toString().padLeft(2, '0')} ${defect.detectionTime.hour.toString().padLeft(2, '0')}:${defect.detectionTime.minute.toString().padLeft(2, '0')}:${defect.detectionTime.second.toString().padLeft(2, '0')}';
 
@@ -82,8 +86,8 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
         ),
         centerTitle: true,
         actions: [
-          // AI 자동 탐지(confidence != null)가 아닌 수동 추가 결함만 수정 가능
-          if (defect.confidence == null)
+          // AI 자동 탐지(confidence != null)가 아닌 수동 추가 결함만 수정 가능 (관리자 권한 필요)
+          if (defect.confidence == null && canEditOrDelete)
             TextButton.icon(
               onPressed: () => _showEditDefectModal(context, defect),
               icon: const Icon(Icons.edit_note, color: brandingBlue, size: 20),
@@ -218,7 +222,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                         children: [
                           _buildDataTab(defect, dateStr),
                           _buildLocationTab(defect),
-                          _buildCommentTab(defect),
+                          _buildCommentTab(defect, canEditOrDelete),
                         ],
                       ),
                     ),
@@ -296,6 +300,17 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                             isEmergency: true,
                           );
                         } else {
+                          if (!canEditOrDelete) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('접근 거부: 결함 삭제/조치 완료는 관리자(레벨 2) 이상만 가능합니다.', style: TextStyle(fontWeight: FontWeight.bold)),
+                                backgroundColor: Color(0xFFFF3B30),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
                           // showDialog(await) 이전에 context 의존 객체 모두 캡처
                           final vm = Provider.of<InspectionViewModel>(
                               context, listen: false);
@@ -921,7 +936,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     );
   }
 
-  Widget _buildCommentTab(Defect defect) {
+  Widget _buildCommentTab(Defect defect, bool canEditOrDelete) {
     bool isAiDetected = defect.confidence != null;
 
     return Container(
@@ -965,6 +980,17 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () async {
+                  if (!canEditOrDelete) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('접근 거부: 결함 메모 수정은 관리자(레벨 2) 이상만 가능합니다.', style: TextStyle(fontWeight: FontWeight.bold)),
+                        backgroundColor: Color(0xFFFF3B30),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+
                   final newComment = _commentCtrl.text.trim();
                   
                   final messenger = ScaffoldMessenger.of(context);
