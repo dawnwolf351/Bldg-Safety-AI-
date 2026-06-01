@@ -642,6 +642,7 @@ class ApiService {
     String? severity,
     String? comment,
     String? imageFilePath,
+    int? buildingId,
   }) async {
     try {
       if (imageFilePath != null && imageFilePath.isNotEmpty) {
@@ -650,6 +651,7 @@ class ApiService {
           if (defectType != null) 'defect_type': defectType,
           if (severity != null) 'severity': severity,
           if (comment != null) 'comment': comment,
+          if (buildingId != null) 'building_id': buildingId.toString(),
           'image': await MultipartFile.fromFile(imageFilePath, filename: imageFilePath.split('/').last),
         });
         final response = await _dio.put('/api/defects/$defectId', data: formData);
@@ -660,6 +662,7 @@ class ApiService {
         if (defectType != null) data['defect_type'] = defectType;
         if (severity != null) data['severity'] = severity;
         if (comment != null) data['comment'] = comment;
+        if (buildingId != null) data['building_id'] = buildingId;
 
         final response = await _dio.put('/api/defects/$defectId', data: data);
         return response.statusCode == 200;

@@ -29,6 +29,7 @@ class InspectionDetailView extends StatefulWidget {
 class _InspectionDetailViewState extends State<InspectionDetailView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late TextEditingController _commentCtrl;
+  Future<LatLng?>? _locationFuture;
 
   // 대시보드 및 진단 내역 화면과 통일된 프리미엄 화이트 테마 토큰
   static const Color bgOffWhite = Color(0xFFF8F9FA);
@@ -47,6 +48,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _commentCtrl = TextEditingController(text: widget.defect.comment ?? '');
+    _locationFuture = _fetchBuildingLocation(widget.defect.buildingId);
   }
 
   @override
@@ -517,6 +519,9 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     }
     String selectedSeverity = currentSev;
 
+    final buildings = Provider.of<BuildingViewModel>(context, listen: false).buildings;
+    int selectedBuildingId = currentDefect.buildingId;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -666,6 +671,42 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                     ),
                     const SizedBox(height: 24),
 
+                    // 건물 위치 선택 (buildingId)
+                    const Text('결함 위치 (건물 ID)', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedBuildingId,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: bgOffWhite,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: brandingBlue, width: 1.5),
+                        ),
+                      ),
+                      items: buildings.map((b) {
+                        return DropdownMenuItem<int>(
+                          value: b.id,
+                          child: Text('${b.buildingName} (ID: ${b.id})'),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => selectedBuildingId = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
                     // 결함 유형 직접 입력
                     const Text('결함 유형', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
                     const SizedBox(height: 8),
@@ -769,6 +810,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                             severity: selectedSeverity,
                             comment: editCommentCtrl.text.trim(),
                             imageFilePath: pickedImageFile?.path,
+                            buildingId: selectedBuildingId,
                           );
                           
                           if (!mounted) return;
@@ -815,7 +857,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
   /* =========== 위치 정보 탭 모듈 =========== */
   Widget _buildLocationTab(Defect defect) {
     return FutureBuilder<LatLng?>(
-      future: _fetchBuildingLocation(defect.buildingId),
+      future: _locationFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(

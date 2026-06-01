@@ -249,6 +249,8 @@ class DefectDetail(Resource):
             defect.defect_type = data['defect_type']
         if 'image_url' in data:
             defect.image_url = data['image_url']
+        if 'building_id' in data:
+            defect.building_id = int(data['building_id'])
         if 'confidence' in data:
             defect.confidence = data['confidence']
         if 'bbox' in data:
