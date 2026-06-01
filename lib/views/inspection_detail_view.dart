@@ -466,8 +466,8 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     } catch (e) {
       debugPrint('위치 조회 오류: $e');
     }
-    // 기본 위치 (건물이 없거나 오류 시 서울 중심)
-    return const LatLng(37.5665, 126.9780);
+    // 건물이 없거나 지오코딩 실패 시 null 반환
+    return null;
   }
 
   /* =========== 위치 정보 탭 모듈 =========== */
@@ -489,7 +489,31 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
           );
         }
 
-        final latLng = snapshot.data ?? const LatLng(37.5665, 126.9780);
+        final latLng = snapshot.data;
+        
+        // 지오코딩 실패 (잘못된 주소 등)
+        if (latLng == null) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _redEmergency),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.location_off, color: _redEmergency, size: 40),
+                  const SizedBox(height: 10),
+                  const Text('해당 건물의 주소를 지도에서 찾을 수 없습니다.\n건물 관리에서 정확한 도로명 주소를 입력해주세요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold, height: 1.5)),
+                ],
+              ),
+            ),
+          );
+        }
 
         return Container(
           decoration: BoxDecoration(
