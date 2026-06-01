@@ -646,19 +646,66 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                     hint: 'ex) AI 안전 단말기 04호',
                     controller: nameController),
                 const SizedBox(height: 16),
-                StatefulBuilder(
-                  builder: (context, setState) {
-                    return _buildModalDropdownField(
-                      label: '섹션',
-                      value: locationController.text.isEmpty ? '본관' : locationController.text,
-                      items: ['본관', '수덕전', '효민갤러리', '정보공학관'],
-                      onChanged: (val) {
-                        setState(() {
-                          locationController.text = val!;
-                        });
+                Consumer<BuildingViewModel>(
+                  builder: (context, buildingVM, _) {
+                    final buildingNames = buildingVM.buildings
+                        .map((b) => b.buildingName)
+                        .toList();
+
+                    // 건물이 없으면 로딩 표시
+                    if (buildingNames.isEmpty) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('장소',
+                              style: TextStyle(
+                                  color: textCharcoal,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: borderLight),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              children: [
+                                SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 2, color: brandingBlue)),
+                                SizedBox(width: 12),
+                                Text('건물 목록 조회 중...', style: TextStyle(color: textLightGrey, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    // 초기값 설정: locationController가 비어있으면 첫 번째 건물을 기본값으로
+                    if (locationController.text.isEmpty) {
+                      locationController.text = buildingNames.first;
+                    }
+
+                    return StatefulBuilder(
+                      builder: (context, setModalState) {
+                        String currentVal = locationController.text;
+                        if (!buildingNames.contains(currentVal)) {
+                          currentVal = buildingNames.first;
+                          locationController.text = currentVal;
+                        }
+                        return _buildModalDropdownField(
+                          label: '장소 (건물 선택)',
+                          value: currentVal,
+                          items: buildingNames,
+                          onChanged: (val) {
+                            setModalState(() {
+                              locationController.text = val!;
+                            });
+                          },
+                        );
                       },
                     );
-                  }
+                  },
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -713,10 +760,7 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      if (!RegExp(r'^[a-zA-Z가-힣\s]+$').hasMatch(section)) {
-                        showError('섹션에는 오직 글자(한/영)만 입력 가능합니다.');
-                        return;
-                      }
+                      // 장소는 건물 DB에서 선택하므로 별도 정규식 검증 없음
 
                       final deviceViewModel = Provider.of<DeviceViewModel>(context, listen: false);
                       final isDuplicateMac = deviceViewModel.devices.any((d) => d.macAddress.toUpperCase() == mac.toUpperCase());
@@ -846,28 +890,66 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                     hint: 'ex) AI 안전 단말기 04호',
                     controller: nameController),
                 const SizedBox(height: 16),
-                StatefulBuilder(
-                  builder: (context, setState) {
-                    // 기기의 초기 위치가 목록에 없을 경우를 대비한 방어 코드
-                    String initialValue = locationController.text;
-                    List<String> options = ['본관', '수덕전', '효민갤러리', '정보공학관'];
-                    if (initialValue.isNotEmpty && !options.contains(initialValue)) {
-                      options.add(initialValue);
-                    } else if (initialValue.isEmpty) {
-                      initialValue = '본관';
+                Consumer<BuildingViewModel>(
+                  builder: (context, buildingVM, _) {
+                    final buildingNames = buildingVM.buildings
+                        .map((b) => b.buildingName)
+                        .toList();
+
+                    // 건물이 없으면 로딩 표시
+                    if (buildingNames.isEmpty) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('장소',
+                              style: TextStyle(
+                                  color: textCharcoal,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: borderLight),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              children: [
+                                SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 2, color: brandingBlue)),
+                                SizedBox(width: 12),
+                                Text('건물 목록 조회 중...', style: TextStyle(color: textLightGrey, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
                     }
 
-                    return _buildModalDropdownField(
-                      label: '섹션',
-                      value: initialValue,
-                      items: options,
-                      onChanged: (val) {
-                        setState(() {
-                          locationController.text = val!;
-                        });
+                    return StatefulBuilder(
+                      builder: (context, setModalState) {
+                        // 기기의 현재 위치가 DB 목록에 없으면 목록에 임시 추가 (하위 호환)
+                        String currentVal = locationController.text;
+                        final List<String> options = List.from(buildingNames);
+                        if (currentVal.isNotEmpty && !options.contains(currentVal)) {
+                          options.add(currentVal);
+                        } else if (currentVal.isEmpty) {
+                          currentVal = options.first;
+                          locationController.text = currentVal;
+                        }
+
+                        return _buildModalDropdownField(
+                          label: '장소 (건물 선택)',
+                          value: currentVal,
+                          items: options,
+                          onChanged: (val) {
+                            setModalState(() {
+                              locationController.text = val!;
+                            });
+                          },
+                        );
                       },
                     );
-                  }
+                  },
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -910,10 +992,8 @@ class _DeviceManagementViewState extends State<DeviceManagementView> {
                         return;
                       }
 
-                      if (!RegExp(r'^[a-zA-Z가-힣\s]+$').hasMatch(section)) {
-                        showError('위치는 글자(한/영)만 입력 가능합니다.');
-                        return;
-                      }
+                      // 장소는 건물 DB에서 선택하므로 별도 정규식 검증 없음
+
 
                       final success = await ApiService().updateJetsonDevice(device.id, mac, name, section);
 
