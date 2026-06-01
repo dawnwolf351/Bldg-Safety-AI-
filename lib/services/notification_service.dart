@@ -86,6 +86,9 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      presentBanner: true, // iOS 14+ 포어그라운드 배너 표시 필수
+      presentList: true,
+      sound: 'default', // 기본 시스템 사운드 명시
     );
 
     final NotificationDetails details = NotificationDetails(
@@ -108,11 +111,21 @@ class NotificationService {
       if (!hasVibrator) return;
 
       if (emergency) {
-        // 긴급 패턴: 3회 반복 강한 진동
-        await Vibration.vibrate(pattern: [0, 500, 200, 500, 200, 500]);
+        // 긴급 패턴
+        if (Platform.isIOS) {
+          // iOS는 CoreHaptics 커스텀 패턴 지원이 제한적이므로 기본 진동 여러번 호출
+          await Vibration.vibrate();
+          await Future.delayed(const Duration(milliseconds: 700));
+          await Vibration.vibrate();
+          await Future.delayed(const Duration(milliseconds: 700));
+          await Vibration.vibrate();
+        } else {
+          // Android는 정밀한 패턴 제어 가능 [대기, 진동, 대기, 진동...]
+          await Vibration.vibrate(pattern: [0, 500, 200, 500, 200, 500]);
+        }
       } else {
         // 일반 경고: 1회 진동
-        await Vibration.vibrate(duration: 400);
+        await Vibration.vibrate(duration: Platform.isIOS ? null : 400);
       }
     } catch (e) {
       debugPrint('진동 오류: $e');
