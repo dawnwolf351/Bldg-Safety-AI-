@@ -10,6 +10,7 @@ class Defect {
   final String? severity;     // 심각도 (경미 / 주의 / 심각)
   final String? imageUrl;     // AI 촬영 결함 사진 경로
   final String? comment;      // 상세 설명 / 작업자 코멘트
+  final double? confidence;   // AI 확신도 (이 값이 있으면 AI 탐지 결함)
   final DateTime detectionTime; // 탐지 일시
 
   Defect({
@@ -20,6 +21,7 @@ class Defect {
     this.severity,
     this.imageUrl,
     this.comment,
+    this.confidence,
     required this.detectionTime,
   });
 
@@ -31,6 +33,7 @@ class Defect {
     String? severity,
     String? imageUrl,
     String? comment,
+    double? confidence,
     DateTime? detectionTime,
   }) {
     return Defect(
@@ -41,6 +44,7 @@ class Defect {
       severity: severity ?? this.severity,
       imageUrl: imageUrl ?? this.imageUrl,
       comment: comment ?? this.comment,
+      confidence: confidence ?? this.confidence,
       detectionTime: detectionTime ?? this.detectionTime,
     );
   }
@@ -55,6 +59,7 @@ class Defect {
       severity: json['severity']?.toString(),
       imageUrl: json['image_url']?.toString(),
       comment: json['comment']?.toString(),
+      confidence: json['confidence'] != null ? double.tryParse(json['confidence'].toString()) : null,
       detectionTime: json['detection_time'] != null
           ? DateTime.tryParse(json['detection_time'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -71,6 +76,7 @@ class Defect {
       'severity': severity,
       'image_url': imageUrl,
       'comment': comment,
+      'confidence': confidence,
       'detection_time': detectionTime.toIso8601String(),
     };
   }

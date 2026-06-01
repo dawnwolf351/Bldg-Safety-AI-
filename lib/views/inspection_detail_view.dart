@@ -467,8 +467,9 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
     );
   }
 
-  /* =========== 작업자 코멘트 탭 모듈 =========== */
   Widget _buildCommentTab(Defect defect) {
+    bool isAiDetected = defect.confidence != null;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -490,44 +491,51 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
             child: TextField(
               controller: _commentCtrl,
               maxLines: null,
-              style: const TextStyle(color: textCharcoal, fontSize: 13, height: 1.5),
-              decoration: const InputDecoration(
-                hintText: '작업자 코멘트나 메모를 자유롭게 남기세요 (서버와 동기화됨)...',
-                hintStyle: TextStyle(color: textLightGrey, fontSize: 13),
+              readOnly: isAiDetected,
+              style: TextStyle(
+                  color: isAiDetected ? textLightGrey : textCharcoal, 
+                  fontSize: 13, 
+                  height: 1.5),
+              decoration: InputDecoration(
+                hintText: isAiDetected 
+                    ? 'AI가 자동 탐지한 결함은 코멘트를 수정할 수 없습니다.' 
+                    : '작업자 코멘트나 메모를 자유롭게 남기세요 (서버와 동기화됨)...',
+                hintStyle: const TextStyle(color: textLightGrey, fontSize: 13),
                 border: InputBorder.none,
                 isDense: true,
               ),
             ),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () async {
-                final newComment = _commentCtrl.text.trim();
-                
-                final messenger = ScaffoldMessenger.of(context);
-                final vm = Provider.of<InspectionViewModel>(context, listen: false);
-                
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('메모를 저장 중입니다...'), duration: Duration(milliseconds: 500)),
-                );
-
-                final success = await vm.updateDefectComment(defect.defectId, newComment);
-                if (!mounted) return;
-
-                if (success) {
+          if (!isAiDetected)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  final newComment = _commentCtrl.text.trim();
+                  
+                  final messenger = ScaffoldMessenger.of(context);
+                  final vm = Provider.of<InspectionViewModel>(context, listen: false);
+                  
                   messenger.showSnackBar(
-                    const SnackBar(content: Text('메모가 서버에 성공적으로 저장되었습니다! ✅', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
+                    const SnackBar(content: Text('메모를 저장 중입니다...'), duration: Duration(milliseconds: 500)),
                   );
-                } else {
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('메모 저장에 실패했습니다. ❌', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: Colors.red),
-                  );
-                }
-              },
-              child: const Text('저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-          )
+
+                  final success = await vm.updateDefectComment(defect.defectId, newComment);
+                  if (!mounted) return;
+
+                  if (success) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('메모가 서버에 성공적으로 저장되었습니다! ✅', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: brandingBlue),
+                    );
+                  } else {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('메모 저장에 실패했습니다. ❌', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: Colors.red),
+                    );
+                  }
+                },
+                child: const Text('저장하기', style: TextStyle(color: brandingBlue, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            )
         ],
       ),
     );

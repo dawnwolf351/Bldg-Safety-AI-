@@ -211,6 +211,10 @@ class DefectDetail(Resource):
     def put(self, current_user, defect_id):
         """결함 정보 수정 (모든 인증된 사용자 가능)"""
         defect = Defect.query.get_or_404(defect_id)
+
+        if defect.confidence is not None:
+            return {"error": "AI가 자동 탐지한 결함은 수정할 수 없습니다."}, HTTPStatus.FORBIDDEN
+
         data = request.get_json()
 
         if 'comment' in data:
@@ -255,6 +259,10 @@ class DefectDetail(Resource):
     def patch(self, current_user, defect_id):
         """결함 메모 수정"""
         defect = Defect.query.get_or_404(defect_id)
+        
+        if defect.confidence is not None:
+            return {"error": "AI가 자동 탐지한 결함은 수정할 수 없습니다."}, HTTPStatus.FORBIDDEN
+
         data = request.get_json()
         if not data:
             return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
