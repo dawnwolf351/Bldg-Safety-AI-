@@ -481,9 +481,23 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
 
   /* =========== 수동 추가 결함 수정 모달 =========== */
   void _showEditDefectModal(BuildContext context, Defect currentDefect) {
-    String selectedType = currentDefect.defectType;
-    String selectedSeverity = currentDefect.severity ?? '경미';
+    TextEditingController editTypeCtrl = TextEditingController(text: currentDefect.defectType);
     TextEditingController editCommentCtrl = TextEditingController(text: currentDefect.comment ?? '');
+
+    // 기존 심각도 값을 A~E로 매핑
+    String currentSev = currentDefect.severity?.toUpperCase() ?? 'A';
+    if (['경미', 'A'].contains(currentSev)) {
+      currentSev = 'A';
+    } else if (['주의', 'C'].contains(currentSev)) {
+      currentSev = 'C';
+    } else if (['심각', 'E'].contains(currentSev)) {
+      currentSev = 'E';
+    }
+    
+    if (!['A','B','C','D','E'].contains(currentSev)) {
+      currentSev = 'A';
+    }
+    String selectedSeverity = currentSev;
 
     showModalBottomSheet(
       context: context,
@@ -529,8 +543,35 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                     ),
                     const SizedBox(height: 24),
 
-                    // 결함 유형 선택
+                    // 결함 유형 직접 입력
                     const Text('결함 유형', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: editTypeCtrl,
+                      style: const TextStyle(fontSize: 15, color: textCharcoal),
+                      decoration: InputDecoration(
+                        hintText: '예: 균열, 화재, 박리, 침수 등',
+                        hintStyle: const TextStyle(color: textLightGrey, fontSize: 14),
+                        filled: true,
+                        fillColor: bgOffWhite,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: borderLight),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: brandingBlue, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 심각도 선택 (드롭다운)
+                    const Text('심각도', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -541,57 +582,23 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: selectedType,
+                          value: selectedSeverity,
                           isExpanded: true,
                           icon: const Icon(Icons.keyboard_arrow_down, color: textLightGrey),
-                          items: ['균열', '박리', '누수', '파손', '화재', '기타'].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value, style: const TextStyle(fontSize: 15, color: textCharcoal)),
-                            );
-                          }).toList(),
+                          items: const [
+                            DropdownMenuItem(value: 'A', child: Text('A (우수 / 매우 안전)', style: TextStyle(fontSize: 15, color: textCharcoal))),
+                            DropdownMenuItem(value: 'B', child: Text('B (양호 / 안전)', style: TextStyle(fontSize: 15, color: textCharcoal))),
+                            DropdownMenuItem(value: 'C', child: Text('C (보통 / 주의)', style: TextStyle(fontSize: 15, color: textCharcoal))),
+                            DropdownMenuItem(value: 'D', child: Text('D (미흡 / 위험)', style: TextStyle(fontSize: 15, color: textCharcoal))),
+                            DropdownMenuItem(value: 'E', child: Text('E (불량 / 매우 위험)', style: TextStyle(fontSize: 15, color: textCharcoal))),
+                          ],
                           onChanged: (newValue) {
                             if (newValue != null) {
-                              setModalState(() => selectedType = newValue);
+                              setModalState(() => selectedSeverity = newValue);
                             }
                           },
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 심각도 선택
-                    const Text('심각도', style: TextStyle(fontWeight: FontWeight.bold, color: textCharcoal, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: ['경미', '주의', '심각'].map((level) {
-                        bool isSelected = selectedSeverity == level;
-                        Color levelColor = level == '심각' ? _redEmergency : (level == '주의' ? _orangeWarning : _greenSafe);
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () => setModalState(() => selectedSeverity = level),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isSelected ? levelColor.withValues(alpha: 0.1) : cardWhite,
-                                border: Border.all(color: isSelected ? levelColor : borderLight),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  level,
-                                  style: TextStyle(
-                                    color: isSelected ? levelColor : textLightGrey,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
                     ),
                     const SizedBox(height: 20),
 
@@ -635,7 +642,7 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                           // 수정 API 호출 (PUT)
                           bool success = await vm.updateDefect(
                             defectId: currentDefect.defectId,
-                            defectType: selectedType,
+                            defectType: editTypeCtrl.text.trim().isEmpty ? '알 수 없음' : editTypeCtrl.text.trim(),
                             severity: selectedSeverity,
                             comment: editCommentCtrl.text.trim(),
                           );
