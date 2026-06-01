@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   // Device & AI Configuration
@@ -14,6 +15,7 @@ class SettingsViewModel extends ChangeNotifier {
   // Notification Settings
   bool _pushNotifications = true;
   bool _soundVibration = true;
+  bool _doNotDisturb = false;
 
   // Getters
   String get droneIp => _droneIp;
@@ -21,6 +23,20 @@ class SettingsViewModel extends ChangeNotifier {
   double get aiThreshold => _aiThreshold;
   bool get pushNotifications => _pushNotifications;
   bool get soundVibration => _soundVibration;
+  bool get doNotDisturb => _doNotDisturb;
+
+  // 생성자에서 저장된 설정 불러오기
+  SettingsViewModel() {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _pushNotifications = prefs.getBool('push_notifications') ?? true;
+    _soundVibration    = prefs.getBool('sound_vibration')    ?? true;
+    _doNotDisturb      = prefs.getBool('do_not_disturb')     ?? false;
+    notifyListeners();
+  }
 
   // Setters
   void updateDroneConfig(String ip, String port) {
@@ -34,13 +50,24 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void togglePushNotifications(bool value) {
+  Future<void> togglePushNotifications(bool value) async {
     _pushNotifications = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_notifications', value);
     notifyListeners();
   }
 
-  void toggleSoundVibration(bool value) {
+  Future<void> toggleSoundVibration(bool value) async {
     _soundVibration = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('sound_vibration', value);
+    notifyListeners();
+  }
+
+  Future<void> toggleDoNotDisturb(bool value) async {
+    _doNotDisturb = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('do_not_disturb', value);
     notifyListeners();
   }
 

@@ -14,13 +14,17 @@ import 'viewmodels/user_viewmodel.dart';
 import 'views/login_view.dart';
 import 'views/dashboard_view.dart';
 import 'utils/globals.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   MediaKit.ensureInitialized();
+  
+  // 알림 서비스 초기화 (알림 권한 요청 포함)
+  await NotificationService().init();
   
   runApp(
     MultiProvider(
