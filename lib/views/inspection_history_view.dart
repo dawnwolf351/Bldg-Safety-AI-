@@ -71,16 +71,20 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                   }
 
                   // 에러 상태 (리스트가 비어있을 때만)
-                  if (viewModel.errorMessage != null && viewModel.defects.isEmpty) {
+                  if (viewModel.errorMessage != null &&
+                      viewModel.defects.isEmpty) {
                     return _buildErrorState(viewModel.errorMessage!);
                   }
 
                   // 필터링 로직: Defect.statusCode를 기반으로 필터
                   final filteredList = viewModel.defects.where((defect) {
                     if (_selectedFilter == '전체') return true;
-                    if (_selectedFilter == '위험' && defect.statusCode == 'CRITICAL') return true;
-                    if (_selectedFilter == '주의' && defect.statusCode == 'WARNING') return true;
-                    if (_selectedFilter == '양호' && defect.statusCode == 'SAFE') return true;
+                    if (_selectedFilter == '위험' &&
+                        defect.statusCode == 'CRITICAL') return true;
+                    if (_selectedFilter == '주의' &&
+                        defect.statusCode == 'WARNING') return true;
+                    if (_selectedFilter == '양호' && defect.statusCode == 'SAFE')
+                      return true;
                     return false;
                   }).toList();
 
@@ -95,10 +99,12 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(
                           parent: BouncingScrollPhysics()),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       itemCount: filteredList.length,
                       itemBuilder: (context, index) {
-                        return _buildHistoryCard(filteredList[index], viewModel);
+                        return _buildHistoryCard(
+                            filteredList[index], viewModel);
                       },
                     ),
                   );
@@ -113,7 +119,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
 
   // 상단 헤더 (화이트 테마) - 관리자 권한일 때 [+ 결함 추가] 버튼 노출
   Widget _buildHeader() {
-    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
+    final String? userRole =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
     final bool canAdd = userRole == 'admin' || userRole == 'super_admin';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -126,7 +133,11 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
               SizedBox(width: 8),
               Text(
                 '결함 탐지 내역',
-                style: TextStyle(color: textCharcoal, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                style: TextStyle(
+                    color: textCharcoal,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5),
               ),
             ],
           ),
@@ -134,12 +145,15 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
             ElevatedButton.icon(
               onPressed: () => _showAddDefectDialog(),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('결함 추가', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              label: const Text('결함 추가',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: brandingBlue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 elevation: 0,
               ),
             ),
@@ -154,30 +168,48 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFEEF2FF), child: Icon(Icons.photo_library_outlined, color: brandingBlue)),
-              title: const Text('갤러리에서 선택', style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFEEF2FF),
+                  child:
+                      Icon(Icons.photo_library_outlined, color: brandingBlue)),
+              title: const Text('갤러리에서 선택',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                if (picked != null) dialogSetState(() => _pickedImageFile = File(picked.path));
+                final picked = await picker.pickImage(
+                    source: ImageSource.gallery, imageQuality: 80);
+                if (picked != null)
+                  dialogSetState(() => _pickedImageFile = File(picked.path));
               },
             ),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFFFF0F0), child: Icon(Icons.camera_alt_outlined, color: Colors.redAccent)),
-              title: const Text('카메라로 촬영', style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFFFF0F0),
+                  child:
+                      Icon(Icons.camera_alt_outlined, color: Colors.redAccent)),
+              title: const Text('카메라로 촬영',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-                if (picked != null) dialogSetState(() => _pickedImageFile = File(picked.path));
+                final picked = await picker.pickImage(
+                    source: ImageSource.camera, imageQuality: 80);
+                if (picked != null)
+                  dialogSetState(() => _pickedImageFile = File(picked.path));
               },
             ),
             const SizedBox(height: 8),
@@ -195,7 +227,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator(color: brandingBlue)),
+      builder: (ctx) =>
+          const Center(child: CircularProgressIndicator(color: brandingBlue)),
     );
 
     List<Building> buildings = [];
@@ -220,7 +253,7 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     final formKey = GlobalKey<FormState>();
     final defectTypeCtrl = TextEditingController();
     final commentCtrl = TextEditingController();
-    
+
     int selectedBuildingId = buildings.first.id;
     int selectedDeviceId = devices.first.id;
     String selectedSeverity = 'A';
@@ -234,8 +267,10 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
         builder: (ctx, dialogSetState) {
           return Dialog(
             backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -250,15 +285,26 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(10)),
-                            child: const Icon(Icons.add_photo_alternate_outlined, color: brandingBlue, size: 22),
+                            decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(
+                                Icons.add_photo_alternate_outlined,
+                                color: brandingBlue,
+                                size: 22),
                           ),
                           const SizedBox(width: 12),
                           const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('결함 탐지 등록', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textCharcoal)),
-                              Text('새 결함 이력을 DB에 저장합니다', style: TextStyle(fontSize: 12, color: textLightGrey)),
+                              Text('결함 탐지 등록',
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                      color: textCharcoal)),
+                              Text('새 결함 이력을 DB에 저장합니다',
+                                  style: TextStyle(
+                                      fontSize: 12, color: textLightGrey)),
                             ],
                           ),
                         ],
@@ -276,7 +322,11 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FAFF),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: _pickedImageFile != null ? brandingBlue : borderLight, width: 1.5),
+                            border: Border.all(
+                                color: _pickedImageFile != null
+                                    ? brandingBlue
+                                    : borderLight,
+                                width: 1.5),
                           ),
                           child: _pickedImageFile != null
                               ? Stack(
@@ -284,16 +334,22 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(13),
-                                      child: Image.file(_pickedImageFile!, fit: BoxFit.cover),
+                                      child: Image.file(_pickedImageFile!,
+                                          fit: BoxFit.cover),
                                     ),
                                     Positioned(
-                                      top: 8, right: 8,
+                                      top: 8,
+                                      right: 8,
                                       child: GestureDetector(
-                                        onTap: () => dialogSetState(() => _pickedImageFile = null),
+                                        onTap: () => dialogSetState(
+                                            () => _pickedImageFile = null),
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                          decoration: const BoxDecoration(
+                                              color: Colors.black54,
+                                              shape: BoxShape.circle),
+                                          child: const Icon(Icons.close,
+                                              color: Colors.white, size: 16),
                                         ),
                                       ),
                                     ),
@@ -302,11 +358,22 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add_photo_alternate_outlined, color: brandingBlue.withValues(alpha: 0.5), size: 40),
+                                    Icon(Icons.add_photo_alternate_outlined,
+                                        color:
+                                            brandingBlue.withValues(alpha: 0.5),
+                                        size: 40),
                                     const SizedBox(height: 8),
-                                    const Text('사진 첨부 (선택)', style: TextStyle(color: textLightGrey, fontSize: 13)),
+                                    const Text('사진 첨부 (선택)',
+                                        style: TextStyle(
+                                            color: textLightGrey,
+                                            fontSize: 13)),
                                     const SizedBox(height: 4),
-                                    Text('갤러리 또는 카메라', style: TextStyle(color: brandingBlue.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
+                                    Text('갤러리 또는 카메라',
+                                        style: TextStyle(
+                                            color: brandingBlue.withValues(
+                                                alpha: 0.7),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                         ),
@@ -326,7 +393,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           );
                         }).toList(),
                         onChanged: (v) {
-                          if (v != null) dialogSetState(() => selectedBuildingId = v);
+                          if (v != null)
+                            dialogSetState(() => selectedBuildingId = v);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -344,7 +412,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           );
                         }).toList(),
                         onChanged: (v) {
-                          if (v != null) dialogSetState(() => selectedDeviceId = v);
+                          if (v != null)
+                            dialogSetState(() => selectedDeviceId = v);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -355,7 +424,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                       TextFormField(
                         controller: defectTypeCtrl,
                         decoration: _inputDecoration('예: 균열, 화재, 박리, 침수 등'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? '결함 유형을 입력해 주세요' : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? '결함 유형을 입력해 주세요'
+                            : null,
                       ),
                       const SizedBox(height: 12),
 
@@ -366,14 +437,20 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                         initialValue: selectedSeverity,
                         decoration: _inputDecoration(null),
                         items: const [
-                          DropdownMenuItem(value: 'A', child: Text('A (우수 / 매우 안전)')),
-                          DropdownMenuItem(value: 'B', child: Text('B (양호 / 안전)')),
-                          DropdownMenuItem(value: 'C', child: Text('C (보통 / 주의)')),
-                          DropdownMenuItem(value: 'D', child: Text('D (미흡 / 위험)')),
-                          DropdownMenuItem(value: 'E', child: Text('E (불량 / 매우 위험)')),
+                          DropdownMenuItem(
+                              value: 'A', child: Text('A (우수 / 매우 안전)')),
+                          DropdownMenuItem(
+                              value: 'B', child: Text('B (양호 / 안전)')),
+                          DropdownMenuItem(
+                              value: 'C', child: Text('C (보통 / 주의)')),
+                          DropdownMenuItem(
+                              value: 'D', child: Text('D (미흡 / 위험)')),
+                          DropdownMenuItem(
+                              value: 'E', child: Text('E (불량 / 매우 위험)')),
                         ],
                         onChanged: (v) {
-                          if (v != null) dialogSetState(() => selectedSeverity = v);
+                          if (v != null)
+                            dialogSetState(() => selectedSeverity = v);
                         },
                       ),
                       const SizedBox(height: 12),
@@ -395,11 +472,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             child: OutlinedButton(
                               onPressed: () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                                 side: const BorderSide(color: borderLight),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                               ),
-                              child: const Text('취소', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.w600)),
+                              child: const Text('취소',
+                                  style: TextStyle(
+                                      color: textLightGrey,
+                                      fontWeight: FontWeight.w600)),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -409,33 +491,48 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                               onPressed: () async {
                                 if (!formKey.currentState!.validate()) return;
                                 Navigator.pop(ctx);
-                                final vm = Provider.of<InspectionViewModel>(context, listen: false);
+                                final vm = Provider.of<InspectionViewModel>(
+                                    context,
+                                    listen: false);
                                 final messenger = ScaffoldMessenger.of(context);
                                 final ok = await vm.addDefect(
                                   buildingId: selectedBuildingId,
                                   deviceId: selectedDeviceId,
                                   defectType: defectTypeCtrl.text.trim(),
                                   severity: selectedSeverity,
-                                  comment: commentCtrl.text.trim().isEmpty ? null : commentCtrl.text.trim(),
+                                  comment: commentCtrl.text.trim().isEmpty
+                                      ? null
+                                      : commentCtrl.text.trim(),
                                   imageFilePath: _pickedImageFile?.path,
                                 );
                                 messenger.showSnackBar(
                                   SnackBar(
-                                    content: Text(ok ? '✅ 결함 탐지 이력이 성공적으로 등록되었습니다.' : '❌ 결함 등록에 실패했습니다. 다시 시도해 주세요.'),
-                                    backgroundColor: ok ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+                                    content: Text(ok
+                                        ? '✅ 결함 탐지 이력이 성공적으로 등록되었습니다.'
+                                        : '❌ 결함 등록에 실패했습니다. 다시 시도해 주세요.'),
+                                    backgroundColor: ok
+                                        ? const Color(0xFF34C759)
+                                        : const Color(0xFFFF3B30),
                                     behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
                                   ),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: brandingBlue,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
                                 elevation: 0,
                               ),
-                              child: const Text('결함 등록', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              child: const Text('결함 등록',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15)),
                             ),
                           ),
                         ],
@@ -453,7 +550,9 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
 
   // 폼 라벨 공통 위젯
   Widget _buildFormLabel(String label) {
-    return Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textCharcoal));
+    return Text(label,
+        style: const TextStyle(
+            fontSize: 13, fontWeight: FontWeight.w700, color: textCharcoal));
   }
 
   // 입력 필드 공통 스타일
@@ -464,11 +563,21 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
       filled: true,
       fillColor: const Color(0xFFF8F9FA),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderLight)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: borderLight)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: brandingBlue, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFF3B30))),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 1.5)),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: borderLight)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: borderLight)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: brandingBlue, width: 1.5)),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFFF3B30))),
+      focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFFF3B30), width: 1.5)),
     );
   }
 
@@ -493,11 +602,13 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                     Icon(Icons.circle, size: 8, color: filter['color']),
                     const SizedBox(width: 6),
                   ],
-                  Text(filter['label'], style: TextStyle(
-                    color: isSelected ? brandingBlue : textLightGrey,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 13,
-                  )),
+                  Text(filter['label'],
+                      style: TextStyle(
+                        color: isSelected ? brandingBlue : textLightGrey,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 13,
+                      )),
                 ],
               ),
               selected: isSelected,
@@ -537,12 +648,16 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 color: brandingBlue.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.assignment_outlined, color: brandingBlue.withValues(alpha: 0.4), size: 48),
+              child: Icon(Icons.assignment_outlined,
+                  color: brandingBlue.withValues(alpha: 0.4), size: 48),
             ),
             const SizedBox(height: 20),
             const Text(
               '결함 탐지 내역이 없습니다',
-              style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: textCharcoal,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -570,30 +685,37 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 color: _redEmergency.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline_rounded, color: _redEmergency, size: 48),
+              child: Icon(Icons.error_outline_rounded,
+                  color: _redEmergency, size: 48),
             ),
             const SizedBox(height: 20),
             const Text(
               '오류가 발생했습니다',
-              style: TextStyle(color: textCharcoal, fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: textCharcoal,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: textLightGrey, fontSize: 13, height: 1.5),
+              style: const TextStyle(
+                  color: textLightGrey, fontSize: 13, height: 1.5),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-                Provider.of<InspectionViewModel>(context, listen: false).fetchDefects();
+                Provider.of<InspectionViewModel>(context, listen: false)
+                    .fetchDefects();
               },
               icon: const Icon(Icons.refresh, size: 18),
               label: const Text('다시 시도'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: brandingBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -607,19 +729,23 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
     bool isCritical = defect.statusCode == 'CRITICAL';
     bool isWarning = defect.statusCode == 'WARNING';
 
-    Color statusColor = isCritical ? _redEmergency : (isWarning ? _orangeWarning : _greenSafe);
+    Color statusColor =
+        isCritical ? _redEmergency : (isWarning ? _orangeWarning : _greenSafe);
     String statusText = defect.statusLabel;
 
     // 날짜 포맷팅
-    String dateStr = '${defect.detectionTime.year}-${defect.detectionTime.month.toString().padLeft(2, '0')}-${defect.detectionTime.day.toString().padLeft(2, '0')} ${defect.detectionTime.hour.toString().padLeft(2, '0')}:${defect.detectionTime.minute.toString().padLeft(2, '0')}';
+    String dateStr =
+        '${defect.detectionTime.year}-${defect.detectionTime.month.toString().padLeft(2, '0')}-${defect.detectionTime.day.toString().padLeft(2, '0')} ${defect.detectionTime.hour.toString().padLeft(2, '0')}:${defect.detectionTime.minute.toString().padLeft(2, '0')}';
 
     // 삭제 권한 확인
-    final String? userRole = Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
+    final String? userRole =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.role;
     final bool canDelete = userRole == 'admin' || userRole == 'super_admin';
 
     return Dismissible(
       key: Key('defect_${defect.defectId}'),
-      direction: canDelete ? DismissDirection.endToStart : DismissDirection.none,
+      direction:
+          canDelete ? DismissDirection.endToStart : DismissDirection.none,
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -628,7 +754,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 28),
+        child: const Icon(Icons.delete_outline_rounded,
+            color: Colors.white, size: 28),
       ),
       confirmDismiss: (direction) async {
         bool confirmDelete = false;
@@ -637,14 +764,20 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
           builder: (dialogContext) => AlertDialog(
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('진단 이력 삭제', style: TextStyle(color: textCharcoal, fontWeight: FontWeight.bold)),
-            content: const Text('이 결함 이력을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.',
-              style: TextStyle(color: textLightGrey, height: 1.5)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('진단 이력 삭제',
+                style: TextStyle(
+                    color: textCharcoal, fontWeight: FontWeight.bold)),
+            content: Text(
+                '이 ${defect.defectType} 결함 이력을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.',
+                style: const TextStyle(color: textLightGrey, height: 1.5)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('취소', style: TextStyle(color: textLightGrey, fontWeight: FontWeight.bold)),
+                child: const Text('취소',
+                    style: TextStyle(
+                        color: textLightGrey, fontWeight: FontWeight.bold)),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -654,9 +787,12 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _redEmergency,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('삭제', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text('삭제',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
           ),
@@ -676,7 +812,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
           } else if (success && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('결함 이력이 성공적으로 삭제되었습니다.', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Text('결함 이력이 성공적으로 삭제되었습니다.',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 backgroundColor: brandingBlue,
               ),
             );
@@ -691,11 +828,15 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
           color: cardWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isCritical ? _redEmergency.withValues(alpha: 0.3) : borderLight,
+            color:
+                isCritical ? _redEmergency.withValues(alpha: 0.3) : borderLight,
             width: isCritical ? 1.5 : 1.0,
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), offset: const Offset(0, 2), blurRadius: 8),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                offset: const Offset(0, 2),
+                blurRadius: 8),
           ],
         ),
         child: ClipRRect(
@@ -728,15 +869,18 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                       fit: StackFit.expand,
                       children: [
                         // 이미지가 있으면 네트워크 이미지, 없으면 아이콘 표시
-                        if (defect.imageUrl != null && defect.imageUrl!.isNotEmpty)
+                        if (defect.imageUrl != null &&
+                            defect.imageUrl!.isNotEmpty)
                           Hero(
                             tag: 'hero_image_${defect.defectId}',
                             child: Image.network(
                               defect.imageUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
                                 color: bgOffWhite,
-                                child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 36),
+                                child: Icon(_getDefectIcon(defect.defectType),
+                                    color: statusColor, size: 36),
                               ),
                             ),
                           )
@@ -744,7 +888,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                           Container(
                             color: statusColor.withValues(alpha: 0.08),
                             child: Center(
-                              child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 36),
+                              child: Icon(_getDefectIcon(defect.defectType),
+                                  color: statusColor, size: 36),
                             ),
                           ),
                         // 이미지와 글씨 겹치는 부분 그라데이션 자연스럽게 블렌딩
@@ -760,10 +905,14 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                         // 위험(CRITICAL)일 때 뜨는 타겟팅 박스 시각 연출
                         if (isCritical)
                           Positioned(
-                            top: 15, right: 15, bottom: 15, left: 15,
+                            top: 15,
+                            right: 15,
+                            bottom: 15,
+                            left: 15,
                             child: Container(
                               decoration: BoxDecoration(
-                                border: Border.all(color: _redEmergency, width: 2),
+                                border:
+                                    Border.all(color: _redEmergency, width: 2),
                                 color: _redEmergency.withValues(alpha: 0.2),
                               ),
                             ),
@@ -774,7 +923,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                   // 오른쪽 텍스트 정보 영역
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 12.0),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14.0, horizontal: 12.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -784,28 +934,43 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: Text(defect.defectType,
-                                  style: const TextStyle(color: textCharcoal, fontSize: 14, fontWeight: FontWeight.bold),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                child: Text(
+                                  defect.defectType,
+                                  style: const TextStyle(
+                                      color: textCharcoal,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               // 위험 등급 배지
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: statusColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                      color:
+                                          statusColor.withValues(alpha: 0.3)),
                                 ),
-                                child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold)),
+                                child: Text(statusText,
+                                    style: TextStyle(
+                                        color: statusColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text(defect.comment ?? '코멘트 없음',
-                            style: const TextStyle(color: textLightGrey, fontSize: 11),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                          Text(
+                            defect.comment ?? '코멘트 없음',
+                            style: const TextStyle(
+                                color: textLightGrey, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 10),
                           Row(
@@ -815,18 +980,29 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                               Expanded(
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.access_time, color: textLightGrey, size: 12),
+                                    const Icon(Icons.access_time,
+                                        color: textLightGrey, size: 12),
                                     const SizedBox(width: 4),
-                                    Flexible(child: Text(dateStr, style: const TextStyle(color: textLightGrey, fontSize: 10), overflow: TextOverflow.ellipsis)),
+                                    Flexible(
+                                        child: Text(dateStr,
+                                            style: const TextStyle(
+                                                color: textLightGrey,
+                                                fontSize: 10),
+                                            overflow: TextOverflow.ellipsis)),
                                   ],
                                 ),
                               ),
                               // 심각도 표시
                               Row(
                                 children: [
-                                  Icon(Icons.circle, color: statusColor, size: 8),
+                                  Icon(Icons.circle,
+                                      color: statusColor, size: 8),
                                   const SizedBox(width: 4),
-                                  Text(defect.severity ?? '미분류', style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w600)),
+                                  Text(defect.severity ?? '미분류',
+                                      style: TextStyle(
+                                          color: statusColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ],
@@ -847,10 +1023,13 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
   // 결함 타입에 따라 아이콘 반환
   IconData _getDefectIcon(String defectType) {
     final lower = defectType.toLowerCase();
-    if (lower.contains('화재') || lower.contains('fire')) return Icons.local_fire_department;
-    if (lower.contains('균열') || lower.contains('crack')) return Icons.broken_image;
+    if (lower.contains('화재') || lower.contains('fire'))
+      return Icons.local_fire_department;
+    if (lower.contains('균열') || lower.contains('crack'))
+      return Icons.broken_image;
     if (lower.contains('박리') || lower.contains('spalling')) return Icons.layers;
-    if (lower.contains('부식') || lower.contains('corrosion')) return Icons.water_damage;
+    if (lower.contains('부식') || lower.contains('corrosion'))
+      return Icons.water_damage;
     return Icons.warning_amber;
   }
 }
