@@ -29,30 +29,41 @@ class ApiService {
 
   /// 서버에서 반환된 image_url을 완전한 URL로 변환
   /// 다양한 형식을 모두 처리:
-  ///   - /api/upload/abc.jpg        → http://121.144.41.106:1310/api/upload/abc.jpg  ✅ 신규 형식
-  ///   - /uploads/defects/abc.jpg   → http://121.144.41.106:1310/api/upload/abc.jpg  ✅ 구형식 자동 변환
-  ///   - /static/uploads/defects/   → http://121.144.41.106:1310/api/upload/...      ✅ 구형식 자동 변환
-  ///   - http://...                 → 그대로 반환
+  ///   - /api/upload/abc.jpg                                    → 그대로 절대 URL 변환 ✅
+  ///   - /uploads/defects/abc.jpg                               → /api/upload/abc.jpg 변환 ✅
+  ///   - /static/uploads/defects/abc.jpg                        → /api/upload/abc.jpg 변환 ✅
+  ///   - http://121.../uploads/defects/abc.jpg (Jetson Nano 형식) → /api/upload/abc.jpg 변환 ✅
+  ///   - http://... (기타 절대 URL)                              → 그대로 반환
   static String? buildImageUrl(String? rawUrl) {
     if (rawUrl == null || rawUrl.trim().isEmpty) return null;
     final url = rawUrl.trim();
 
-    // 이미 절대 URL이면 그대로
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // 이미 절대 URL인 경우 → /uploads/defects/ 또는 /static/uploads/defects/ 포함 시 /api/upload/ 로 변환
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (url.contains('/uploads/defects/')) {
+        final filename = url.split('/uploads/defects/').last;
+        return '$serverBaseUrl/api/upload/$filename';
+      }
+      if (url.contains('/static/uploads/defects/')) {
+        final filename = url.split('/static/uploads/defects/').last;
+        return '$serverBaseUrl/api/upload/$filename';
+      }
+      return url; // 그 외 절대 URL은 그대로
+    }
 
-    // 구형식 /uploads/defects/<파일명> → /api/upload/<파일명> 자동 변환
+    // 상대 경로: /uploads/defects/<파일명> → /api/upload/<파일명>
     if (url.startsWith('/uploads/defects/')) {
       final filename = url.replaceFirst('/uploads/defects/', '');
       return '$serverBaseUrl/api/upload/$filename';
     }
 
-    // 구형식 /static/uploads/defects/<파일명> → /api/upload/<파일명> 자동 변환
+    // 상대 경로: /static/uploads/defects/<파일명> → /api/upload/<파일명>
     if (url.startsWith('/static/uploads/defects/')) {
       final filename = url.replaceFirst('/static/uploads/defects/', '');
       return '$serverBaseUrl/api/upload/$filename';
     }
 
-    // 슬래시 없으면 붙여서 반환
+    // 슬래시 없으면 파일명으로 간주 → /api/upload/<파일명>
     if (!url.startsWith('/')) return '$serverBaseUrl/api/upload/$url';
 
     return '$serverBaseUrl$url';
