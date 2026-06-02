@@ -139,20 +139,6 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                                 ),
                               ),
                             ),
-                            // 하단 그라데이션 오버레이 (텍스트로 자연스럽게 연결)
-                            Positioned(
-                              bottom: 0, left: 0, right: 0,
-                              child: Container(
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [Colors.transparent, bgOffWhite.withValues(alpha: 0.95)],
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
