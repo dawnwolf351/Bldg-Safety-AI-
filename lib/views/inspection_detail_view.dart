@@ -108,47 +108,72 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. 대형 결함 이미지 또는 아이콘 영역
-                    Center(
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              offset: const Offset(0, 4),
-                              blurRadius: 16,
+                    // 1. 결함 이미지 영역 - 이미지 있으면 풀 너비 히어로, 없으면 아이콘
+                    if (defect.imageUrl != null && defect.imageUrl!.isNotEmpty) ...[
+                      // 풀 너비 이미지 배너
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Stack(
+                          children: [
+                            Hero(
+                              tag: 'hero_image_${defect.defectId}',
+                              child: Image.network(
+                                ApiService.buildImageUrl(defect.imageUrl) ?? defect.imageUrl!,
+                                width: double.infinity,
+                                height: 260,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    width: double.infinity,
+                                    height: 260,
+                                    color: bgOffWhite,
+                                    child: const Center(child: CircularProgressIndicator()),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  width: double.infinity,
+                                  height: 260,
+                                  color: statusColor.withValues(alpha: 0.08),
+                                  child: Center(child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 72)),
+                                ),
+                              ),
+                            ),
+                            // 하단 그라데이션 오버레이 (텍스트로 자연스럽게 연결)
+                            Positioned(
+                              bottom: 0, left: 0, right: 0,
+                              child: Container(
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, bgOffWhite.withValues(alpha: 0.95)],
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
-                          border: Border.all(color: borderLight),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: defect.imageUrl != null && defect.imageUrl!.isNotEmpty
-                              ? Hero(
-                                  tag: 'hero_image_${defect.defectId}',
-                                  child: Image.network(
-                                    ApiService.buildImageUrl(defect.imageUrl) ?? defect.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return const Center(child: CircularProgressIndicator());
-                                    },
-                                    errorBuilder: (context, error, stackTrace) => Center(
-                                      child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 64),
-                                    ),
-                                  ),
-                                )
-                              : Center(
-                                  child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 72),
-                                ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 12),
+                    ] else ...[
+                      // 이미지 없으면 기존 아이콘 방식
+                      Center(
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 56),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // 2. 결함 제목
                     Center(
