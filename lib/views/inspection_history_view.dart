@@ -883,25 +883,33 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             defect.imageUrl!.isNotEmpty)
                           Hero(
                             tag: 'hero_image_${defect.defectId}',
-                            child: Image.network(
-                              ApiService.buildImageUrl(defect.imageUrl) ?? defect.imageUrl!,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: bgOffWhite,
-                                  child: const Center(
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                color: bgOffWhite,
-                                child: Icon(_getDefectIcon(defect.defectType),
-                                    color: statusColor, size: 36),
-                              ),
-                            ),
+                            child: Builder(builder: (context) {
+                              final imgUrl = ApiService.buildImageUrl(defect.imageUrl) ?? defect.imageUrl!;
+                              debugPrint('🖼️ [결함카드] 이미지 로드 시도: $imgUrl');
+                              debugPrint('🖼️ [결함카드] 원본 image_url: ${defect.imageUrl}');
+                              return Image.network(
+                                imgUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: bgOffWhite,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint('🚨 [이미지 로드 실패] URL: $imgUrl');
+                                  debugPrint('🚨 [이미지 로드 실패] 에러: $error');
+                                  return Container(
+                                    color: bgOffWhite,
+                                    child: Icon(_getDefectIcon(defect.defectType),
+                                        color: statusColor, size: 36),
+                                  );
+                                },
+                              );
+                            }),
                           )
                         else
                           Container(

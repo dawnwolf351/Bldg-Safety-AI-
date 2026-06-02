@@ -27,12 +27,20 @@ class ApiService {
   static const String serverBaseUrl = 'http://121.144.41.106:1310';
   final String _baseUrl = serverBaseUrl;
 
-  /// 서버에서 반환된 상대 경로 image_url을 완전한 URL로 변환
-  /// 예) /uploads/defects/abc.jpg → http://121.144.41.106:1310/uploads/defects/abc.jpg
-  static String? buildImageUrl(String? relativeUrl) {
-    if (relativeUrl == null || relativeUrl.isEmpty) return null;
-    if (relativeUrl.startsWith('http')) return relativeUrl; // 이미 절대 URL이면 그대로
-    return '$serverBaseUrl$relativeUrl';
+  /// 서버에서 반환된 image_url을 완전한 URL로 변환
+  /// 다양한 형식을 모두 처리:
+  ///   - /uploads/defects/abc.jpg  → http://121.144.41.106:1310/uploads/defects/abc.jpg
+  ///   - uploads/defects/abc.jpg   → http://121.144.41.106:1310/uploads/defects/abc.jpg
+  ///   - http://...                → 그대로 반환
+  ///   - /static/uploads/defects/  → http://121.144.41.106:1310/static/uploads/defects/...
+  static String? buildImageUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return null;
+    final url = rawUrl.trim();
+    // 이미 절대 URL이면 그대로
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // 슬래시 없으면 붙여서 반환
+    if (!url.startsWith('/')) return '$serverBaseUrl/$url';
+    return '$serverBaseUrl$url';
   }
 
   ApiService() {
@@ -547,7 +555,15 @@ class ApiService {
         }
 
         debugPrint('🔍 [결함 목록] 파싱된 결함 수: ${data.length}건');
-        return data.map((json) => Defect.fromJson(json)).toList();
+        final defects = data.map((json) => Defect.fromJson(json)).toList();
+        // 이미지 URL 디버깅: Jetson Nano가 저장한 image_url 형식 확인
+        for (final d in defects) {
+          if (d.imageUrl != null && d.imageUrl!.isNotEmpty) {
+            debugPrint('🖼️ [DB image_url 원본] ID=${d.defectId}: "${d.imageUrl}"');
+            debugPrint('🖼️ [변환 후 URL] ID=${d.defectId}: "${ApiService.buildImageUrl(d.imageUrl)}"');
+          }
+        }
+        return defects;
       }
       return [];
     } catch (e) {
