@@ -681,28 +681,43 @@ class ApiService {
     int? buildingId,
   }) async {
     try {
-      if (imageFilePath != null && imageFilePath.isNotEmpty) {
-        // 이미지 있는 경우 multipart/form-data 전송
-        final formData = FormData.fromMap({
-          if (defectType != null) 'defect_type': defectType,
-          if (severity != null) 'severity': severity,
-          if (comment != null) 'comment': comment,
-          if (buildingId != null) 'building_id': buildingId.toString(),
-          'image': await MultipartFile.fromFile(imageFilePath, filename: imageFilePath.split('/').last),
-        });
-        final response = await _dio.put('/api/defects/$defectId', data: formData);
-        return response.statusCode == 200;
-      } else {
-        // 이미지 없는 경우 JSON 전송
-        final Map<String, dynamic> data = {};
-        if (defectType != null) data['defect_type'] = defectType;
-        if (severity != null) data['severity'] = severity;
-        if (comment != null) data['comment'] = comment;
-        if (buildingId != null) data['building_id'] = buildingId;
+      String? uploadedImageUrl;
 
-        final response = await _dio.put('/api/defects/$defectId', data: data);
-        return response.statusCode == 200;
+      // 1단계: 이미지 파일이 있으면 먼저 /api/upload/에 업로드
+      if (imageFilePath != null && imageFilePath.isNotEmpty) {
+        debugPrint('🖼️ [결함 수정 이미지 업로드] /api/upload/ 로 이미지 전송 중...');
+        debugPrint('🖼️ [결함 수정 이미지 업로드] 파일 경로: $imageFilePath');
+        try {
+          final formData = FormData.fromMap({
+            'file': await MultipartFile.fromFile(
+              imageFilePath,
+              filename: imageFilePath.split('/').last,
+            ),
+          });
+          final uploadResponse = await _dio.post('/api/upload/', data: formData);
+          if (uploadResponse.statusCode == 201 && uploadResponse.data != null) {
+            uploadedImageUrl = uploadResponse.data['image_url']?.toString();
+            debugPrint('✅ [결함 수정 이미지 업로드] 성공: $uploadedImageUrl');
+          } else {
+            debugPrint('⚠️ [결함 수정 이미지 업로드] 실패 (이미지 없이 수정 진행)');
+          }
+        } catch (uploadError) {
+          debugPrint('⚠️ [결함 수정 이미지 업로드] 오류 (이미지 없이 수정 진행): $uploadError');
+        }
       }
+
+      // 2단계: JSON PUT으로 결함 수정 (image_url 포함)
+      final Map<String, dynamic> data = {};
+      if (defectType != null) data['defect_type'] = defectType;
+      if (severity != null) data['severity'] = severity;
+      if (comment != null) data['comment'] = comment;
+      if (buildingId != null) data['building_id'] = buildingId;
+      if (uploadedImageUrl != null) data['image_url'] = uploadedImageUrl;
+
+      debugPrint('📝 [결함 수정] PUT /api/defects/$defectId 데이터: $data');
+      final response = await _dio.put('/api/defects/$defectId', data: data);
+      debugPrint('✅ [결함 수정] 상태코드: ${response.statusCode}');
+      return response.statusCode == 200;
     } catch (e) {
       debugPrint('🚨 HTTP updateDefect Error: $e');
       return false;
