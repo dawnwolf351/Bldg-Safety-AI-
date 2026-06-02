@@ -23,8 +23,17 @@ class ApiService {
   // [토큰 갱신 중복 방지] 여러 요청이 동시에 401을 받을 때 refresh를 한 번만 수행
   bool _isRefreshing = false;
 
-  // 👉 백엔드 서버 호스팅 주소
-  final String _baseUrl = 'http://121.144.41.106:1310';
+  // 👉 백엔드 서버 호스팅 주소 (외부 접근용 static 상수)
+  static const String serverBaseUrl = 'http://121.144.41.106:1310';
+  final String _baseUrl = serverBaseUrl;
+
+  /// 서버에서 반환된 상대 경로 image_url을 완전한 URL로 변환
+  /// 예) /uploads/defects/abc.jpg → http://121.144.41.106:1310/uploads/defects/abc.jpg
+  static String? buildImageUrl(String? relativeUrl) {
+    if (relativeUrl == null || relativeUrl.isEmpty) return null;
+    if (relativeUrl.startsWith('http')) return relativeUrl; // 이미 절대 URL이면 그대로
+    return '$serverBaseUrl$relativeUrl';
+  }
 
   ApiService() {
     _dio.options.baseUrl = _baseUrl;
@@ -575,8 +584,8 @@ class ApiService {
     }
   }
 
-  // 17-A. 결함 등록 (POST /api/defects/) - 관리자 레벨 2 이상
-  // 이미지 파일이 있으면 multipart/form-data, 없으면 JSON으로 전송
+  // 17-A. 결함 등록 (POST /api/defects/)
+  // 이미지가 있으면 /api/upload/에 먼저 업로드 → 받은 image_url을 결함 JSON에 포함해 등록
   Future<bool> createDefect({
     required int buildingId,
     required int deviceId,
@@ -587,37 +596,48 @@ class ApiService {
   }) async {
     debugPrint('📸 [결함 등록] 새 결함 등록 요청');
     try {
+      String? uploadedImageUrl;
+
+      // 1단계: 이미지 파일이 있으면 먼저 /api/upload/에 업로드
       if (imageFilePath != null && imageFilePath.isNotEmpty) {
-        // 이미지 있는 경우 multipart/form-data 전송
-        final formData = FormData.fromMap({
-          'building_id': buildingId,
-          'device_id': deviceId,
-          'defect_type': defectType,
-          if (severity != null) 'severity': severity,
-          if (comment != null) 'comment': comment,
-          'image': await MultipartFile.fromFile(imageFilePath, filename: imageFilePath.split('/').last),
-        });
-        final response = await _dio.post('/api/defects/', data: formData);
-        debugPrint('✅ [결함 등록] 이미지 포함 상태코드: ${response.statusCode}');
-        return response.statusCode == 200 || response.statusCode == 201;
-      } else {
-        // 이미지 없는 경우 JSON 전송
-        final data = {
-          'building_id': buildingId,
-          'device_id': deviceId,
-          'defect_type': defectType,
-          if (severity != null) 'severity': severity,
-          if (comment != null) 'comment': comment,
-        };
-        final response = await _dio.post('/api/defects/', data: data);
-        debugPrint('✅ [결함 등록] JSON 상태코드: ${response.statusCode}');
-        return response.statusCode == 200 || response.statusCode == 201;
+        debugPrint('🖼️ [이미지 업로드] /api/upload/ 로 이미지 전송 중...');
+        try {
+          final formData = FormData.fromMap({
+            'file': await MultipartFile.fromFile(
+              imageFilePath,
+              filename: imageFilePath.split('/').last,
+            ),
+          });
+          final uploadResponse = await _dio.post('/api/upload/', data: formData);
+          if (uploadResponse.statusCode == 201 && uploadResponse.data != null) {
+            uploadedImageUrl = uploadResponse.data['image_url']?.toString();
+            debugPrint('✅ [이미지 업로드] 성공: $uploadedImageUrl');
+          } else {
+            debugPrint('⚠️ [이미지 업로드] 실패 (무시하고 이미지 없이 등록 진행)');
+          }
+        } catch (uploadError) {
+          debugPrint('⚠️ [이미지 업로드] 오류 (무시하고 이미지 없이 등록 진행): $uploadError');
+        }
       }
+
+      // 2단계: 결함 JSON 등록 (image_url 포함)
+      final Map<String, dynamic> data = {
+        'building_id': buildingId,
+        'device_id': deviceId,
+        'defect_type': defectType,
+        if (severity != null) 'severity': severity,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+        if (uploadedImageUrl != null) 'image_url': uploadedImageUrl,
+      };
+      final response = await _dio.post('/api/defects/', data: data);
+      debugPrint('✅ [결함 등록] 상태코드: ${response.statusCode}');
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       debugPrint('🚨 HTTP createDefect Error: $e');
       return false;
     }
   }
+
 
   // 16-1. 결함 메모(comment) 수정 (PATCH /api/defects/<id>)
   Future<bool> updateDefectComment(int defectId, String comment) async {

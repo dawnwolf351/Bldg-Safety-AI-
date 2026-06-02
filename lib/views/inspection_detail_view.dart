@@ -13,6 +13,7 @@ import '../utils/alert_utils.dart';
 import '../services/notification_service.dart';
 import '../viewmodels/settings_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../services/api_service.dart';
 
 class InspectionDetailView extends StatefulWidget {
   final Defect defect;
@@ -130,8 +131,12 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                               ? Hero(
                                   tag: 'hero_image_${defect.defectId}',
                                   child: Image.network(
-                                    defect.imageUrl!,
+                                    ApiService.buildImageUrl(defect.imageUrl) ?? defect.imageUrl!,
                                     fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(child: CircularProgressIndicator());
+                                    },
                                     errorBuilder: (context, error, stackTrace) => Center(
                                       child: Icon(_getDefectIcon(defect.defectType), color: statusColor, size: 64),
                                     ),
@@ -641,7 +646,14 @@ class _InspectionDetailViewState extends State<InspectionDetailView> with Single
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        Image.network(currentDefect.imageUrl!, fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.broken_image, color: textLightGrey, size: 40)),
+                                        Image.network(
+                                          ApiService.buildImageUrl(currentDefect.imageUrl) ?? currentDefect.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                          },
+                                          errorBuilder: (_,__,___) => const Icon(Icons.broken_image, color: textLightGrey, size: 40)),
                                         Positioned(
                                           top: 8,
                                           right: 8,

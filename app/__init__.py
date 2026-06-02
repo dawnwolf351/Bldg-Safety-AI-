@@ -82,5 +82,13 @@ def create_app():
                 print(f"Body: {body}")
         print("---------------------------------------")
 
+    # 업로드된 결함 이미지 파일을 직접 서빙 (GET /uploads/defects/<filename>)
+    @app.route('/uploads/defects/<path:filename>')
+    def serve_defect_image(filename):
+        import os as _os
+        from flask import send_from_directory
+        upload_folder = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), 'uploads', 'defects')
+        return send_from_directory(upload_folder, filename)
+
     return app
 

@@ -168,22 +168,53 @@ class DefectList(Resource):
     )
     @token_required
     def post(self, current_user):
-        """결함 정보 등록 (모든 인증된 사용자 가능 -> 관리자 레벨 2 이상으로 변경)"""
+        """결함 정보 등록 (관리자 레벨 2 이상, 이미지 포함 multipart/form-data 지원)"""
         user_level = current_user.role_info.level if current_user.role_info else 3
         if user_level > 2:
             return {"error": "접근 거부: 결함 이력 등록은 관리자(레벨 2) 이상만 가능합니다."}, HTTPStatus.FORBIDDEN
 
-        data = request.get_json()
+        image_url = None
+
+        # multipart/form-data (이미지 포함) 처리
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            data = request.form.to_dict()
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    upload_folder = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                        'uploads', 'defects'
+                    )
+                    os.makedirs(upload_folder, exist_ok=True)
+                    filename = secure_filename(file.filename)
+                    filename = f"{int(time.time())}_{filename}"
+                    file_path = os.path.join(upload_folder, filename)
+                    file.save(file_path)
+                    image_url = f"/uploads/defects/{filename}"
+        else:
+            data = request.get_json(silent=True)
+
         if not data:
             return {"error": "요청 본문(body)이 비어있습니다."}, HTTPStatus.BAD_REQUEST
 
+        # image_url이 body에 포함된 경우 우선 사용
+        if 'image_url' in data and data['image_url']:
+            image_url = data['image_url']
+
         try:
+            building_id = int(data.get('building_id', 0))
+            device_id = int(data.get('device_id', 0))
+            defect_type = data.get('defect_type', '')
+
+            if not building_id or not device_id or not defect_type:
+                return {"error": "building_id, device_id, defect_type 필드는 필수입니다."}, HTTPStatus.BAD_REQUEST
+
             new_defect = Defect(
-                building_id=data['building_id'],
-                device_id=data['device_id'],
-                defect_type=data['defect_type'],
+                building_id=building_id,
+                device_id=device_id,
+                defect_type=defect_type,
                 severity=data.get('severity'),
-                image_url=data.get('image_url'),
+                image_url=image_url,
                 comment=data.get('comment'),
                 confidence=data.get('confidence'),
                 bbox=data.get('bbox'),
