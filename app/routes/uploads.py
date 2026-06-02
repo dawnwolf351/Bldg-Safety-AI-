@@ -50,8 +50,8 @@ class ImageUpload(Resource):
         filepath = os.path.join(UPLOAD_FOLDER, safe_filename)
         file.save(filepath)
 
-        # 클라이언트가 접근할 수 있는 URL 경로 반환
-        image_url = f"/uploads/defects/{safe_filename}"
+        # 클라이언트가 접근할 수 있는 URL 경로 반환 (/api/upload/<filename>으로 직접 접근 가능)
+        image_url = f"/api/upload/{safe_filename}"
 
         return {
             "message": "이미지가 업로드되었습니다.",

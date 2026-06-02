@@ -190,7 +190,7 @@ class DefectList(Resource):
                     filename = f"{int(time.time())}_{filename}"
                     file_path = os.path.join(upload_folder, filename)
                     file.save(file_path)
-                    image_url = f"/uploads/defects/{filename}"
+                    image_url = f"/api/upload/{filename}"  # /api/upload/<filename> 라우트로 제공
         else:
             data = request.get_json(silent=True)
 
@@ -262,13 +262,16 @@ class DefectDetail(Resource):
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename != '':
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'defects')
+                    upload_folder = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                        'uploads', 'defects'
+                    )
                     os.makedirs(upload_folder, exist_ok=True)
                     filename = secure_filename(file.filename)
                     filename = f"{int(time.time())}_{filename}"
                     file_path = os.path.join(upload_folder, filename)
                     file.save(file_path)
-                    defect.image_url = f"/static/uploads/defects/{filename}"
+                    defect.image_url = f"/api/upload/{filename}"  # /api/upload/<filename> 라우트로 제공
         else:
             data = request.get_json()
 

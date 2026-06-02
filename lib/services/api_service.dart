@@ -29,17 +29,32 @@ class ApiService {
 
   /// 서버에서 반환된 image_url을 완전한 URL로 변환
   /// 다양한 형식을 모두 처리:
-  ///   - /uploads/defects/abc.jpg  → http://121.144.41.106:1310/uploads/defects/abc.jpg
-  ///   - uploads/defects/abc.jpg   → http://121.144.41.106:1310/uploads/defects/abc.jpg
-  ///   - http://...                → 그대로 반환
-  ///   - /static/uploads/defects/  → http://121.144.41.106:1310/static/uploads/defects/...
+  ///   - /api/upload/abc.jpg        → http://121.144.41.106:1310/api/upload/abc.jpg  ✅ 신규 형식
+  ///   - /uploads/defects/abc.jpg   → http://121.144.41.106:1310/api/upload/abc.jpg  ✅ 구형식 자동 변환
+  ///   - /static/uploads/defects/   → http://121.144.41.106:1310/api/upload/...      ✅ 구형식 자동 변환
+  ///   - http://...                 → 그대로 반환
   static String? buildImageUrl(String? rawUrl) {
     if (rawUrl == null || rawUrl.trim().isEmpty) return null;
     final url = rawUrl.trim();
+
     // 이미 절대 URL이면 그대로
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+    // 구형식 /uploads/defects/<파일명> → /api/upload/<파일명> 자동 변환
+    if (url.startsWith('/uploads/defects/')) {
+      final filename = url.replaceFirst('/uploads/defects/', '');
+      return '$serverBaseUrl/api/upload/$filename';
+    }
+
+    // 구형식 /static/uploads/defects/<파일명> → /api/upload/<파일명> 자동 변환
+    if (url.startsWith('/static/uploads/defects/')) {
+      final filename = url.replaceFirst('/static/uploads/defects/', '');
+      return '$serverBaseUrl/api/upload/$filename';
+    }
+
     // 슬래시 없으면 붙여서 반환
-    if (!url.startsWith('/')) return '$serverBaseUrl/$url';
+    if (!url.startsWith('/')) return '$serverBaseUrl/api/upload/$url';
+
     return '$serverBaseUrl$url';
   }
 
