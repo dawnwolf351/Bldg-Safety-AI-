@@ -9,6 +9,7 @@ from app.routes.users import users_ns
 from app.routes.buildings import building_ns, defect_ns
 from app.routes.safety_grades import grade_ns
 from app.routes.device_states import device_state_ns
+from app.routes.uploads import upload_ns
 
 def create_app():
     app = Flask(__name__)
@@ -47,6 +48,7 @@ def create_app():
     api.add_namespace(defect_ns, path='/api/defects')
     api.add_namespace(grade_ns, path='/api/safety-grades')
     api.add_namespace(device_state_ns, path='/api/device-states')
+    api.add_namespace(upload_ns, path='/api/upload')
 
     # DB 모델 임포트 및 테이블 자동 생성
     with app.app_context():
