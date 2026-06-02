@@ -40,23 +40,39 @@ class InspectionViewModel extends ChangeNotifier {
         // 새로 추가된 결함 필터링 (기존 _defects 에 없는 항목들)
         final newDefects = latest.where((l) => !_defects.any((d) => d.defectId == l.defectId)).toList();
         
-        // 새로 추가된 결함 중 심각도가 CRITICAL(E등급)인 것이 있는지 확인
-        final hasNewCritical = newDefects.any((d) => d.statusCode == 'CRITICAL');
+        // 새로 추가된 결함 중 심각도가 CRITICAL(E등급) 또는 WARNING(D등급)인 것이 있는지 확인
+        final newAlertDefects = newDefects.where((d) => d.statusCode == 'CRITICAL' || d.statusCode == 'WARNING').toList();
 
         _defects = latest;
         notifyListeners();
 
-        // 만약 새로운 E등급(CRITICAL) 결함이 감지되었다면 실시간으로 알림 팝업 띄우기
-        if (hasNewCritical) {
-          final newCritical = newDefects.firstWhere((d) => d.statusCode == 'CRITICAL');
+        // 만약 새로운 위험/주의 결함이 감지되었다면 실시간으로 알림 팝업 띄우기
+        if (newAlertDefects.isNotEmpty) {
+          for (var alertDefect in newAlertDefects) {
+            String buildingName = "건물명 미상";
+            String location = "위치 미상";
+            
+            try {
+              // 건물 정보를 가져와 매칭 (API 호출 부하를 줄이기 위해 보통은 캐싱된 데이터를 쓰지만, 여기서는 실시간 긴급 알림이므로 직접 조회)
+              final buildings = await ApiService().getBuildings();
+              final targetBuilding = buildings.firstWhere((b) => b.id == alertDefect.buildingId);
+              buildingName = targetBuilding.buildingName;
+              location = targetBuilding.location;
+            } catch (_) {
+              // 찾지 못해도 기본값으로 진행
+            }
 
-          // iOS 시스템 알림 즈시 발송 (설정 권한 무관하게 일단 발송)
-          await NotificationService().showEmergencyNotification(
-            title: '🚨 긴급 위험 감지!',
-            body: '[${newCritical.defectType}] ${newCritical.severity ?? "심각"} 등급 결함이 자동 탐지되었습니다. 즉각 확인하세요.',
-          );
+            final gradeStr = alertDefect.statusCode == 'CRITICAL' ? '긴급 위험(E)' : '주의(D)';
+            final gradeLabel = alertDefect.severity ?? "심각";
 
-          // 앱 내 팝업도 동시에 표시
+            // iOS/AOS 시스템 알림 즉시 발송
+            await NotificationService().showEmergencyNotification(
+              title: '🚨 $gradeStr 감지!',
+              body: '[$buildingName / $location]\n${alertDefect.defectType} ($gradeLabel) 결함이 자동 탐지되었습니다. 즉각 확인하세요.',
+            );
+          }
+
+          // 앱 내 팝업도 동시에 표시 (마지막 알림 기준 1회만)
           final context = globalNavKey.currentContext;
           if (context != null && context.mounted) {
             EmergencyAlert.show(context);
