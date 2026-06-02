@@ -660,11 +660,11 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
   // 보고서 생성 시 장치 선택 모달 (화이트 테마 & 모바일 사이즈 최적화)
-  void _showReportDeviceSelector(BuildContext context) {
-    final devices = Provider.of<DeviceViewModel>(context, listen: false).devices;
+  void _showReportDeviceSelector(BuildContext parentContext) {
+    final devices = Provider.of<DeviceViewModel>(parentContext, listen: false).devices;
 
     if (devices.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('등록된 장치가 없습니다.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('등록된 장치가 없습니다.'), backgroundColor: Colors.red));
       return;
     }
 
@@ -674,17 +674,17 @@ class _DashboardViewState extends State<DashboardView> {
     }
 
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (modalContext, setModalState) {
             final selectedCount = selectedMap.values.where((v) => v).length;
             final allSelected = selectedCount == devices.length;
 
             return Container(
-              height: MediaQuery.of(context).size.height * 0.6,
+              height: MediaQuery.of(modalContext).size.height * 0.6,
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
                 color: cardWhite,
@@ -740,8 +740,9 @@ class _DashboardViewState extends State<DashboardView> {
                           ? null
                           : () {
                               final selectedDevices = devices.where((d) => selectedMap[d.id] == true).toList();
-                              Navigator.pop(context);
-                              ReportService.generateAndPreview(context, selectedDevices);
+                              Navigator.pop(modalContext);
+                              // 언마운트된 바텀시트 컨텍스트 대신 화면의 안전한 parentContext 전달
+                              ReportService.generateAndPreview(parentContext, selectedDevices);
                             },
                       icon: const Icon(Icons.picture_as_pdf, size: 18),
                       label: Text('$selectedCount개 장치 보고서 생성', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
