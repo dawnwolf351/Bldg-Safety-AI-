@@ -929,8 +929,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             ),
                           ),
                         ),
-                        // 위험(CRITICAL)일 때 뜨는 타겟팅 박스 시각 연출
-                        if (isCritical)
+                        // 이미지가 없을 때만 뜨는 타겟팅 박스 시각 연출 (모든 등급 지원)
+                        if (defect.imageUrl == null || defect.imageUrl!.isEmpty)
                           Positioned(
                             top: 15,
                             right: 15,
@@ -939,8 +939,8 @@ class _InspectionHistoryViewState extends State<InspectionHistoryView> {
                             child: Container(
                               decoration: BoxDecoration(
                                 border:
-                                    Border.all(color: _redEmergency, width: 2),
-                                color: _redEmergency.withValues(alpha: 0.2),
+                                    Border.all(color: statusColor, width: 2),
+                                color: statusColor.withValues(alpha: 0.15),
                               ),
                             ),
                           ),
