@@ -50,7 +50,7 @@ def handle_client(client_socket, addr, app):
                         msg_type = 'telemetry' if ('cpu_usage' in info or 'temperature_cpu' in info) else 'heartbeat'
 
                     if msg_type == 'heartbeat':
-                        print(f"💓 [TCP 서버] 하트비트 수신 (온라인 상태 갱신 완료): MAC={mac}")
+                        print(f"[TCP 서버] 하트비트 수신 (온라인 상태 갱신 완료): MAC={mac}")
                         
                     elif msg_type == 'telemetry':
                         new_state = DeviceState(
