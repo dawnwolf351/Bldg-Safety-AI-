@@ -61,21 +61,26 @@ class DeviceRealTimeMonitorView extends StatelessWidget {
       body: Consumer<DashboardViewModel>(
         builder: (context, dashVM, child) {
           final history = dashVM.deviceStateHistory[device.id] ?? [];
-          
-          if (history.isEmpty) {
-            return const Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: AppColors.brandingBlue),
-                SizedBox(height: 16),
-                Text('데이터를 수집하는 중...', style: TextStyle(color: AppColors.lightGrey)),
-              ],
-            ));
-          }
+          final latest = history.isNotEmpty
+              ? history.last
+              : DeviceState(
+                  id: 0,
+                  deviceId: device.id,
+                  recordedAt: null,
+                  cpuUsage: 0.0,
+                  gpuUsage: 0.0,
+                  gpuMemoryUsage: 0.0,
+                  ramUsage: 0.0,
+                  temperatureSoc: 0.0,
+                  temperatureCpu: 0.0,
+                  temperatureGpu: 0.0,
+                  inferenceFps: 0.0,
+                  modelName: '알 수 없음',
+                  cameraStatus: '오프라인',
+                  depthSensorStatus: '오프라인',
+                );
 
-          final latest = history.last;
-
-          // 차트 데이터 변환
+          // 차트 데이터 변환 (기존 로직 유지, 빈 배열은 _buildChartCard에서 처리)
           final cpuData = history.map((e) => e.cpuUsage).toList();
           final gpuData = history.map((e) => e.gpuUsage).toList();
           final ramData = history.map((e) => e.ramUsage).toList();
@@ -106,7 +111,13 @@ class DeviceRealTimeMonitorView extends StatelessWidget {
   }
 
   // 실시간 라인 차트 카드
-  Widget _buildChartCard(String title, List<double> data, Color color, String unit, double maxY) {
+  Widget _buildChartCard(String title, List<double> rawData, Color color, String unit, double maxY) {
+    // 빈 데이터 처리 및 1개일 때의 처리 (LineChart는 점 2개 이상 필요)
+    List<double> data = rawData.isEmpty ? [0.0, 0.0] : List.from(rawData);
+    if (data.length == 1) data = [data[0], data[0]];
+
+    final displayValue = rawData.isEmpty ? '-' : '${data.last.toStringAsFixed(1)}$unit';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -127,28 +138,23 @@ class DeviceRealTimeMonitorView extends StatelessWidget {
               const SizedBox(width: 8),
               Text(title, style: const TextStyle(color: AppColors.charcoal, fontSize: 13, fontWeight: FontWeight.w800)),
               const Spacer(),
-              if (data.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${data.last.toStringAsFixed(1)}$unit',
-                    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: rawData.isEmpty ? AppColors.borderLight : color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Text(
+                  displayValue,
+                  style: TextStyle(color: rawData.isEmpty ? AppColors.lightGrey : color, fontSize: 12, fontWeight: FontWeight.w900),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           SizedBox(
             height: 120,
-            child: data.length < 2
-                ? const Center(
-                    child: Text('데이터 수집 중...', style: TextStyle(color: AppColors.lightGrey, fontSize: 12)),
-                  )
-                : LineChart(
+            child: LineChart(
                     LineChartData(
                       minY: 0,
                       maxY: maxY,
